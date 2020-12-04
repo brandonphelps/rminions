@@ -3,15 +3,15 @@
 #![allow(dead_code)]
 
 // is there a way to only do this once? 
-#[cfg(gui)]
+#[cfg(feature = "gui")]
 use sdl2;
-#[cfg(gui)]
+#[cfg(feature = "gui")]
 use sdl2::pixels::Color;
-#[cfg(gui)]
+#[cfg(feature = "gui")]
 use sdl2::rect::Rect;
-#[cfg(gui)]
+#[cfg(feature = "gui")]
 use sdl2::render::Canvas;
-#[cfg(gui)]
+#[cfg(feature = "gui")]
 use sdl2::video::Window;
 
 use crate::collision;
@@ -312,12 +312,12 @@ fn game_state_update(game_state: &GameState, dt: f64, game_input: &GameInput) ->
     return new_state;
 }
 
-#[cfg(gui)] 
+#[cfg(feature = "gui")] 
 fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> () {
     canvas.set_draw_color(Color::RGB(0, 255, 0));
     // put this into a asteroids specific draw function.
 
-    for ast in new_state.asteroids.iter() {
+    for ast in game_state.asteroids.iter() {
         canvas.set_draw_color(Color::RGB(255, 0, 0));
         let p = canvas.fill_rect(Rect::new(
             ast.rust_sux.pos_x as i32,
@@ -331,7 +331,7 @@ fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> () {
         }
     }
 
-    for bull in new_state.bullets.iter() {
+    for bull in game_state.bullets.iter() {
         canvas.set_draw_color(Color::RGB(125, 125, 0));
         let p = canvas.fill_rect(Rect::new(
             bull.rust_sux.pos_x as i32,
@@ -347,14 +347,14 @@ fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> () {
 
     canvas.set_draw_color(Color::RGB(0, 255, 0));
     let p = canvas.fill_rect(Rect::new(
-        new_state.player.rust_sux.pos_x as i32,
-        new_state.player.rust_sux.pos_y as i32,
-        new_state.player.radius as u32,
-        new_state.player.radius as u32,
+        game_state.player.rust_sux.pos_x as i32,
+        game_state.player.rust_sux.pos_y as i32,
+        game_state.player.radius as u32,
+        game_state.player.radius as u32,
     ));
 } 
 
-#[cfg(not(gui))]
+#[cfg(not(feature = "gui"))]
 pub fn game_update(game_state: &GameState,
 		   dt: f64,
 		   game_input: &GameInput) -> GameState {
@@ -363,7 +363,7 @@ pub fn game_update(game_state: &GameState,
 }
 
 
-#[cfg(gui)]
+#[cfg(feature = "gui")]
 pub fn game_update(
     game_state: &GameState,
     dt: f64,
@@ -372,11 +372,11 @@ pub fn game_update(
 ) -> GameState {
 
     let new_state = game_state_update(game_state, dt, game_input);
-    game_sdl2_render(new_state);
+    game_sdl2_render(&new_state, canvas);
     return new_state;
 }
 
-#[cfg(all(test, not(gui)))]
+#[cfg(all(test, not(feature = "gui")))]
 mod tests {
     use super::*;
 
