@@ -2,10 +2,16 @@
 #![allow(unused_mut)]
 #![allow(dead_code)]
 
+// is there a way to only do this once? 
+#[cfg(gui)]
 use sdl2;
+#[cfg(gui)]
 use sdl2::pixels::Color;
+#[cfg(gui)]
 use sdl2::rect::Rect;
+#[cfg(gui)]
 use sdl2::render::Canvas;
+#[cfg(gui)]
 use sdl2::video::Window;
 
 use crate::collision;
@@ -167,6 +173,19 @@ fn shoot_bullet(game_state: &mut GameState) -> () {
     game_state.bullets.push(bullet);
 }
 
+#[cfg(not(gui))]
+pub fn game_update(game_state: &GameState,
+		   dt: f64,
+		   game_input: &GameInput) -> GameState {
+
+    let mut new_state = game_state.clone();
+
+
+    return new_state;
+}
+
+
+#[cfg(gui)]
 pub fn game_update(
     game_state: &GameState,
     dt: f64,
