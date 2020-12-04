@@ -185,7 +185,9 @@ fn game_state_update(game_state: &GameState, dt: f64, game_input: &GameInput) ->
     println!("Shoot bullet cd: {}", new_state.shoot_bullet_cd);
 
     if game_input.shoot && new_state.shoot_bullet_cd == 0 {
+	println!("Shooting a bullet");
         shoot_bullet(&mut new_state);
+
 	// todo: what should the cd be? 
 	new_state.shoot_bullet_cd = 10;
     }
@@ -421,19 +423,29 @@ mod tests {
         assert!(pos_thing.pos_y == 1.0);
     }
 
-    #[test]
-    fn test_shoot() {
+    fn test_game_shoot() {
 	let game_state  = game_init();
 
 	let game_input = GameInput {
 	    rotation: 0.0,
-	    shoot: true,
+	    shoot: false,
 	    thrusters: false,
 	};
 
 	let mut new_state = game_update(&game_state, 0.1, &game_input);
+	assert_eq!(new_state.bullets.len(), 0);
 
-	assert_eq!(new_state.bullets.len(), 1);
+	// currently can't assert that bullet shoots cause it could collide with an asteroid
+	// todo: update game init to take number of asteroids then can test if bullets shoot or not. 
+    }
+
+    #[test]
+    fn test_shoot_bullet() {
+	let mut game_state  = game_init();
+
+	shoot_bullet(&mut game_state);
+
+	assert_eq!(game_state.bullets.len(), 1);
 
     }
 }
