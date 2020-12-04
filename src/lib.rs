@@ -1,6 +1,6 @@
 
-mod asteroids;
-mod collision;
+pub mod asteroids;
+pub mod collision;
 
 
 
