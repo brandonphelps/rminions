@@ -173,35 +173,16 @@ fn shoot_bullet(game_state: &mut GameState) -> () {
     game_state.bullets.push(bullet);
 }
 
-#[cfg(not(gui))]
-pub fn game_update(game_state: &GameState,
-		   dt: f64,
-		   game_input: &GameInput) -> GameState {
-
+// update game logic 
+fn game_state_update(game_state: &GameState, dt: f64, game_input: &GameInput) -> GameState {
     let mut new_state = game_state.clone();
-
-
-    return new_state;
-}
-
-
-#[cfg(gui)]
-pub fn game_update(
-    game_state: &GameState,
-    dt: f64,
-    game_input: &GameInput,
-    canvas: &mut Canvas<Window>,
-) -> GameState {
-
-    let mut new_state = game_state.clone();
-
-    let pixels_to_meters = 10;
-
+    
     new_state.shoot_bullet_cd = game_state.shoot_bullet_cd - 1;
 
     if new_state.shoot_bullet_cd < 0 {
 	new_state.shoot_bullet_cd = 0;
     }
+    println!("Shoot bullet cd: {}", new_state.shoot_bullet_cd);
 
     if game_input.shoot && new_state.shoot_bullet_cd == 0 {
         shoot_bullet(&mut new_state);
@@ -236,8 +217,7 @@ pub fn game_update(
         game_state.world_height,
     );
 
-    canvas.set_draw_color(Color::RGB(0, 255, 0));
-    for ast in new_state.asteroids.iter_mut() {
+   for ast in new_state.asteroids.iter_mut() {
         update_pos(
             &mut ast.rust_sux,
             dt,
@@ -327,7 +307,12 @@ pub fn game_update(
         new_state.game_over = true;
         new_state.game_over_is_win = true;
     }
+    return new_state;
+}
 
+#[cfg(gui)] 
+fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> () {
+    canvas.set_draw_color(Color::RGB(0, 255, 0));
     // put this into a asteroids specific draw function.
 
     for ast in new_state.asteroids.iter() {
@@ -365,15 +350,31 @@ pub fn game_update(
         new_state.player.radius as u32,
         new_state.player.radius as u32,
     ));
+} 
 
-    match p {
-        Ok(_) => {}
-        Err(_) => {}
-    }
+#[cfg(not(gui))]
+pub fn game_update(game_state: &GameState,
+		   dt: f64,
+		   game_input: &GameInput) -> GameState {
+
+    game_state_update(game_state, dt, &game_input)
+}
+
+
+#[cfg(gui)]
+pub fn game_update(
+    game_state: &GameState,
+    dt: f64,
+    game_input: &GameInput,
+    canvas: &mut Canvas<Window>,
+) -> GameState {
+
+    let new_state = game_state_update(game_state, dt, game_input);
+    game_sdl2_render(new_state);
     return new_state;
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(gui)))]
 mod tests {
     use super::*;
 
@@ -419,4 +420,21 @@ mod tests {
         assert!(pos_thing.pos_x > -0.0001);
         assert!(pos_thing.pos_y == 1.0);
     }
+
+    #[test]
+    fn test_shoot() {
+	let game_state  = game_init();
+
+	let game_input = GameInput {
+	    rotation: 0.0,
+	    shoot: true,
+	    thrusters: false,
+	};
+
+	let mut new_state = game_update(&game_state, 0.1, &game_input);
+
+	assert_eq!(new_state.bullets.len(), 1);
+
+    }
 }
+
