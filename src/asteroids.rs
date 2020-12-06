@@ -182,12 +182,8 @@ fn game_state_update(game_state: &GameState, dt: f64, game_input: &GameInput) ->
     if new_state.shoot_bullet_cd < 0 {
 	new_state.shoot_bullet_cd = 0;
     }
-    println!("Shoot bullet cd: {}", new_state.shoot_bullet_cd);
-
     if game_input.shoot && new_state.shoot_bullet_cd == 0 {
-	println!("Shooting a bullet");
         shoot_bullet(&mut new_state);
-
 	// todo: what should the cd be? 
 	new_state.shoot_bullet_cd = 10;
     }
