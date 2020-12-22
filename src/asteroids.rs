@@ -86,7 +86,7 @@ pub struct GameState {
     // if true then the game is finished.
     pub game_over: bool,
     pub game_over_is_win: bool,
-    score: u64,
+    pub score: u64,
 }
 
 pub struct GameInput {
