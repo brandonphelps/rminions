@@ -166,7 +166,7 @@ fn shoot_bullet(game_state: &mut GameState) -> () {
             velocity: p.rust_sux.velocity + 2.0,
             direction: p.rust_sux.direction,
         },
-        life_time: 10.0,
+        life_time: 20.0,
         radius: 2.0,
     };
 
