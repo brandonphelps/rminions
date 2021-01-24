@@ -1,5 +1,5 @@
 [package]
-name = "rasteroids"
+name = "rminions"
 version = "0.1.0"
 authors = ["brandon phelps <bwp44f@mst.edu>"]
 edition = "2018"

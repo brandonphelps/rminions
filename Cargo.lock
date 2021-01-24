@@ -83,7 +83,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rasteroids"
+name = "rminions"
 version = "0.1.0"
 dependencies = [
  "rand",

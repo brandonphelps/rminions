@@ -2,7 +2,7 @@
 pub mod asteroids;
 pub mod collision;
 
-
+mod game_state;
 
 #[cfg(test)]
 mod tests {
