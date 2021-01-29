@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 // Components
 /// Position component, tracks the x, y of an entity. 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Position {
     x: u32,
     y: u32,
@@ -24,10 +24,12 @@ pub struct Collision {
 #[derive(PartialEq, Copy, Clone, Eq, Hash)]
 pub struct Entity(u64);
 
+#[derive(Clone)]
 pub struct EntityManager {
     entities: HashSet<Entity>,
     current_entity_id: Entity,
 }
+
 
 impl EntityManager {
     pub fn new() -> EntityManager {
@@ -42,6 +44,7 @@ impl EntityManager {
     }
 }
 
+#[derive(Clone)]
 pub struct ComponentManager<T> {
     components: Vec<T>,
     entities: Vec<Entity>,
@@ -103,9 +106,27 @@ pub struct Tile {
 }
 
 // holds a single frame of the game at a given point. 
-#[derive(Clone, Debug)]
 pub struct GameState {
-    
+    entity_manager: EntityManager,
+    positions: ComponentManager<Position>,
+}
+
+impl GameState {
+    pub fn new() -> GameState {
+	GameState {
+	    entity_manager: EntityManager::new(),
+	    positions: ComponentManager::<Position>::new(),
+	}
+    }
+}
+
+pub struct GameInput {
+    // todo.
+    // initial idea is game input is a order set of commands that are processed in order
+    // invalid commands would thus return errors back and result in no further commands
+    // being processed.
+
+    create_unit: bool,
 }
 
 
@@ -148,5 +169,42 @@ mod tests {
 	    pos.y = 20;
 	}
 	assert_eq!(position_component_manager.contains(&new_e), true);
+
+	match position_component_manager.lookup.get(&new_e) {
+	    Some(&t) => assert_eq!(t, 0 as usize),
+	    None => assert_eq!(true, false),
+	};
+	
+	assert_eq!(position_component_manager.contains(&new_e), true);
+
+
+	let pos = match position_component_manager.get(&new_e) {
+	    Some(t) => t,
+	    _ => panic!("Failed to get item"),
+	};
+	assert_eq!(pos.x, 10);
+	assert_eq!(pos.y, 20);
     }
+}
+
+pub fn game_init() -> GameState {
+    return GameState::new();
+}
+
+pub fn game_update(game_state: &GameState, dt: f64, game_input: &GameInput) -> GameState {
+    // this clone is cloning a &GameState and not a GameState?
+    let mut new_game_state = game_state.clone();
+
+    // todo: game logic update stuff. 
+
+    if game_input.create_unit {
+	let new_entity = new_game_state.entity_manager.create();
+	let mut pos_component = new_game_state.positions.create(&new_entity);
+	pos_component.x = 0;
+	pos_component.y = 1;
+
+	let next_entity = new_game_state.entity_manager.create();
+    }
+
+    return new_game_state;
 }
