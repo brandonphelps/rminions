@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::collections::HashMap;
 
 //
 // visual width, visual height
@@ -20,7 +21,7 @@ pub struct Collision {
 }
 
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Eq, Hash)]
 pub struct Entity(u64);
 
 pub struct EntityManager {
@@ -43,7 +44,9 @@ impl EntityManager {
 
 pub struct ComponentManager<T> {
     components: Vec<T>,
-    entities: Vec<Entity>
+    entities: Vec<Entity>,
+    // maps the entities to their corresponding index (component)
+    lookup: HashMap<Entity, usize>,
 }
 
 impl<T> ComponentManager<T> where T: Default
@@ -51,13 +54,14 @@ impl<T> ComponentManager<T> where T: Default
     fn new() -> ComponentManager<T> {
 	ComponentManager {
 	    components: Vec::new(),
-	    entities: Vec::new()
+	    entities: Vec::new(),
+	    lookup: HashMap::new(), 
 	}
     }
 
     /// Checks if an the associated entity contains the component of type T
     fn contains(&self, entity: &Entity) -> bool {
-	match self.entities.iter().position(|x| x.0 == entity.0) {
+	match self.lookup.get(entity) { 
 	    Some(_) => true,
 	    None => false,
 	}
@@ -69,18 +73,23 @@ impl<T> ComponentManager<T> where T: Default
 	    todo!();
 	}
 	
+	let entity_index = self.components.len();
 	// T must define a default value. 
 	self.components.push(T::default());
-	self.entities.push(*entity);
 
-	let size = self.components.len()-1;
-	return &mut self.components[size];
+	self.entities.push(*entity);
+	self.lookup.insert(*entity, entity_index);
+
+	return &mut self.components[entity_index];
     }
 
     /// Returns the associated component for the entity provided.
     /// Returns None if the entity does not have such a component. 
-    fn get(&self, entity: Entity) -> Option<&T> {
-	todo!();
+    fn get(&mut self, entity: &Entity) -> Option<&mut T> {
+	match self.lookup.get(entity) {
+	    Some(&t) => Some(&mut self.components[t]),
+	    None => None,
+	}
     }
 }
     
