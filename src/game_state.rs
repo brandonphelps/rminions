@@ -13,13 +13,18 @@ pub struct Position {
     y: u32,
 }
 
+/// How much energy a specific entity contains. 
+#[derive(Default, Clone)]
+pub struct EnergyLevel {
+    value: u32,
+}
+
 /// Collision component, tracks if the the entity should collide.
 /// Collision only occurs if both entity have collection.
 #[derive(Default)]
 pub struct Collision {
     value: bool,
 }
-
 
 #[derive(PartialEq, Copy, Clone, Eq, Hash)]
 pub struct Entity(u64);
@@ -93,6 +98,18 @@ impl<T> ComponentManager<T> where T: Default
 	    None => None,
 	}
     }
+
+    /// removes the entity and its corresponding component. 
+    fn remove(&mut self, entity: &Entity) {
+	use std::mem;
+	match self.lookup.get(entity) {
+	    Some(&entity_index) => {
+		self.components.swap_remove(entity_index);
+		self.lookup.remove(entity);
+	    },
+	    None => {}, 
+	};
+    }
 }
     
 
@@ -109,6 +126,7 @@ pub struct Tile {
 pub struct GameState {
     entity_manager: EntityManager,
     positions: ComponentManager<Position>,
+    energy_levels: ComponentManager<EnergyLevel>,
 }
 
 impl GameState {
@@ -116,6 +134,7 @@ impl GameState {
 	GameState {
 	    entity_manager: EntityManager::new(),
 	    positions: ComponentManager::<Position>::new(),
+	    energy_levels: ComponentManager::<EnergyLevel>::new(),
 	}
     }
 }
@@ -184,6 +203,23 @@ mod tests {
 	};
 	assert_eq!(pos.x, 10);
 	assert_eq!(pos.y, 20);
+    }
+
+    #[test]
+    fn component_remove() {
+	let mut position_component_manager = ComponentManager::<Position>::new();
+	let p = EntityManager::new();
+	let new_e = p.create();
+
+	{
+	    let pos = position_component_manager.create(&new_e);
+	    pos.x = 10;
+	    pos.y = 20;
+	}
+
+	position_component_manager.remove(&new_e);
+	assert_eq!(position_component_manager.contains(&new_e), false);
+	assert_eq!(position_component_manager.components.len(), 0);
     }
 }
 
