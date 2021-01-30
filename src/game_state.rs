@@ -30,7 +30,6 @@ pub struct EntityManager {
     current_entity_id: Entity,
 }
 
-
 impl EntityManager {
     pub fn new() -> EntityManager {
 	// purposely starting from 1. 
@@ -106,6 +105,7 @@ pub struct Tile {
 }
 
 // holds a single frame of the game at a given point. 
+#[derive(Clone)]
 pub struct GameState {
     entity_manager: EntityManager,
     positions: ComponentManager<Position>,
@@ -191,6 +191,9 @@ pub fn game_init() -> GameState {
     return GameState::new();
 }
 
+// hive should be the only building that is non moveable.
+// all other "buildings" are moveable units. 
+
 pub fn game_update(game_state: &GameState, dt: f64, game_input: &GameInput) -> GameState {
     // this clone is cloning a &GameState and not a GameState?
     let mut new_game_state = game_state.clone();
@@ -205,6 +208,8 @@ pub fn game_update(game_state: &GameState, dt: f64, game_input: &GameInput) -> G
 
 	let next_entity = new_game_state.entity_manager.create();
     }
+
+    
 
     return new_game_state;
 }
