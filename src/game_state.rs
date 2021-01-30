@@ -42,8 +42,10 @@ impl EntityManager {
 			entities: HashSet::new() }
     }
 
-    pub fn create(&self) -> Entity {
+    pub fn create(&mut self) -> Entity {
 	let new_id = Entity(self.current_entity_id.0);
+	self.entities.insert(new_id);
+	self.current_entity_id = Entity(self.current_entity_id.0 + 1);
 	return new_id;
     }
 }
@@ -90,9 +92,16 @@ impl<T> ComponentManager<T> where T: Default
 	return &mut self.components[entity_index];
     }
 
+    fn get(&self, entity: &Entity) -> Option<&T> {
+	match self.lookup.get(entity) {
+	    Some(&t) => Some(&self.components[t]),
+	    None => None,
+	}
+    }
+
     /// Returns the associated component for the entity provided.
     /// Returns None if the entity does not have such a component. 
-    fn get(&mut self, entity: &Entity) -> Option<&mut T> {
+    fn mut_get(&mut self, entity: &Entity) -> Option<&mut T> {
 	match self.lookup.get(entity) {
 	    Some(&t) => Some(&mut self.components[t]),
 	    None => None,
@@ -101,7 +110,6 @@ impl<T> ComponentManager<T> where T: Default
 
     /// removes the entity and its corresponding component. 
     fn remove(&mut self, entity: &Entity) {
-	use std::mem;
 	match self.lookup.get(entity) {
 	    Some(&entity_index) => {
 		self.components.swap_remove(entity_index);
@@ -127,6 +135,8 @@ pub struct GameState {
     entity_manager: EntityManager,
     positions: ComponentManager<Position>,
     energy_levels: ComponentManager<EnergyLevel>,
+
+    hive_entity: Option<Entity>,
 }
 
 impl GameState {
@@ -135,7 +145,51 @@ impl GameState {
 	    entity_manager: EntityManager::new(),
 	    positions: ComponentManager::<Position>::new(),
 	    energy_levels: ComponentManager::<EnergyLevel>::new(),
+	    hive_entity: None,
 	}
+    }
+
+    pub fn create_hive(&mut self, x: u32, y: u32) {
+	match self.hive_entity {
+	    None => {
+		self.hive_entity = Some(self.entity_manager.create());
+		let mut p = self.positions.create(&(self.hive_entity.expect("Failed to create entity")));
+		p.x = x;
+		p.y = y;
+	    },
+	    _ => (),
+	};
+	return ();
+    }
+
+    pub fn has_hive(&self) -> bool {
+	match self.hive_entity {
+	    Some(_) => true,
+	    None => false,
+	}
+    }
+
+    // testing / debug
+    pub fn string(&self) -> String {
+	let mut res = String::new();
+
+	for entity in self.entity_manager.entities.iter() {
+	    res.push_str(&format!("Entity: {}\n", entity.0));
+	    match self.positions.get(&entity) {
+		Some(t) => {
+		    res.push_str(&format!("\t P: {}, {}\n", t.x, t.y));
+		},
+		None => {},
+	    };
+	    match self.energy_levels.get(&entity) {
+		Some(t) => {
+		    res.push_str(&format!("\t E: {}\n", t.value));
+		},
+		None => {},
+	    }
+	}
+
+	return res;
     }
 }
 
@@ -144,8 +198,18 @@ pub struct GameInput {
     // initial idea is game input is a order set of commands that are processed in order
     // invalid commands would thus return errors back and result in no further commands
     // being processed.
+    pub create_unit: bool,
+    pub create_hive: bool,
+    
+}
 
-    create_unit: bool,
+impl GameInput {
+    pub fn default() -> GameInput {
+	GameInput {
+	     create_unit: false,
+	     create_hive: false,
+	}
+    }
 }
 
 
@@ -221,6 +285,14 @@ mod tests {
 	assert_eq!(position_component_manager.contains(&new_e), false);
 	assert_eq!(position_component_manager.components.len(), 0);
     }
+
+    #[test]
+    fn entity_create() {
+	let p = EntityManager::new();
+	let new_e = p.create();
+	let new_f = p.create();
+	assert_ne!(new_e, new_f);
+    }
 }
 
 pub fn game_init() -> GameState {
@@ -230,22 +302,23 @@ pub fn game_init() -> GameState {
 // hive should be the only building that is non moveable.
 // all other "buildings" are moveable units. 
 
-pub fn game_update(game_state: &GameState, dt: f64, game_input: &GameInput) -> GameState {
+pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> GameState {
     // this clone is cloning a &GameState and not a GameState?
     let mut new_game_state = game_state.clone();
 
     // todo: game logic update stuff. 
+    if game_input.create_hive {
+	if !new_game_state.has_hive() { 
+	    new_game_state.create_hive(0, 0);
+	}
+    }
 
     if game_input.create_unit {
 	let new_entity = new_game_state.entity_manager.create();
 	let mut pos_component = new_game_state.positions.create(&new_entity);
 	pos_component.x = 0;
 	pos_component.y = 1;
-
-	let next_entity = new_game_state.entity_manager.create();
     }
-
-    
 
     return new_game_state;
 }
