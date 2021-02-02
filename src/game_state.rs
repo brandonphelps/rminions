@@ -43,7 +43,7 @@ pub enum Command {
 
 /// Collision component, tracks if the the entity should collide.
 /// Collision only occurs if both entity have collection.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Collision {
     value: bool,
 }
@@ -146,6 +146,7 @@ pub struct Tile {}
 pub struct GameState {
     entity_manager: EntityManager,
     positions: ComponentManager<Position>,
+    collision: ComponentManager<Collision>,
     energy_levels: ComponentManager<EnergyLevel>,
     hive_entity: Option<Entity>,
     iron_mines: ComponentManager<MineableNode>,
@@ -159,6 +160,7 @@ impl GameState {
             positions: ComponentManager::<Position>::new(),
             energy_levels: ComponentManager::<EnergyLevel>::new(),
             hive_entity: None,
+            collision: ComponentManager::<Collision>::new(),
             iron_mines: ComponentManager::<MineableNode>::new(),
             memory: ComponentManager::<Memory>::new(),
         }
@@ -189,6 +191,21 @@ impl GameState {
     // return a list of available entities.
     pub fn get_units(&self) -> Vec<&Entity> {
         return self.entity_manager.entities.iter().collect();
+    }
+
+    pub fn get_mineable_nodes(&self) -> Vec<&Entity> {
+	let mut result = Vec::new();
+	for e in self.entity_manager.entities.iter() {
+	    match self.iron_mines.get(&e) {
+		Some(t) => result.push(e),
+		None => (),
+	    }
+	}
+	return result;
+    }
+
+    pub fn get_entity_pos(&self, entity: &Entity) -> Option<Position> {
+	todo!("returns a position if corresponding entity has a position"); 
     }
 
     // testing / debug
@@ -368,6 +385,7 @@ pub fn game_load() -> GameState {
 
     // unit
     let new_entity = new_game_state.entity_manager.create();
+    println!("First unit!: {}", &new_entity.0);
     let mut pos_component = new_game_state.positions.create(&new_entity);
     pos_component.x = 0;
     pos_component.y = 1;
@@ -389,9 +407,50 @@ pub fn game_load() -> GameState {
 /// @breif helper function for spawning units as the corresponding position
 fn spawn_unit(game_state: &mut GameState, p: Position) {
     let new_entity = game_state.entity_manager.create();
+    // todo: add collision detection to where the spawn point is located relative to the hive. 
     let mut pos_component = game_state.positions.create(&new_entity);
     *pos_component = p;
     game_state.memory.create(&new_entity);
+    game_state.collision.create(&new_entity);
+}
+
+
+//
+fn spawn_mineable<F>(game_state: &mut GameState, p: Position, node_type: F) {
+    todo!("Spawn a node of type F");
+}
+
+// not all items that have positions are moveable, should there exist moveable componetns?
+// currently not a good way to tie component X first entity to its other components. ./shrug
+fn movement_system(entity: &Entity,
+		   positions: &mut ComponentManager<Position>,
+		   collisions: &mut ComponentManager<Collision>,
+		   new_pos: Position
+) {
+    // todo: check if new pos is within bounds?
+
+    let mut is_colliding = false;
+
+    // collision movement system. 
+    for e_collision in collisions.entities.iter() {
+	match positions.get(&e_collision) {
+	    Some(t) => {
+		if t.x == new_pos.x && t.y == new_pos.y {
+		    println!("A collision has occured at {}, {}", t.x, t.y);
+		    is_colliding = true;
+		    break;
+		}
+	    },
+	    // this collision entity doesn't have a position.
+	    None => (),
+	}
+    }
+
+    if !is_colliding {
+	// its okay to move to new_pos.
+	let mut pos = positions.get_mut(&entity).expect(&(format!("an entity didn't have a position? entity id: {}", entity.0)));
+	*pos = new_pos;
+    }
 }
 
 // hive should be the only building that is non moveable.
@@ -421,6 +480,7 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
 			// has a range of 5. 
 			if manhat_distance(t.x, t.y, 0, 0) > 5 {
 			    println!("unable to load commands into entity as its far away");
+			    // todo: need some sort of log listing and reporting to the user. 
 			}
 			else
 			{
@@ -457,7 +517,7 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
         if is_colliding {
             println!("Cannot create new entity at same position as another");
         } else {
-	    spawn_unit(&new_game_state, Position { x: 0, y: 1});
+	    spawn_unit(&mut new_game_state, Position { x: 0, y: 1});
         }
     }
 
@@ -465,41 +525,42 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
         match new_game_state.memory.get_mut(&e) {
             Some(mut memory_comp) => {
                 // process memory.
-                let current_command = &memory_comp.commands[memory_comp.program_counter as usize];
-                match current_command {
-                    Command::MoveP(P) => {
-                        println!("Moving: {}, {}", P.x, P.y);
-                        match new_game_state.positions.get_mut(&e) {
-                            Some(mut t) => {
-                                t.x = P.x;
-                                t.y = P.y;
+		println!("Process memory of unit: {}", e.0);
+		if memory_comp.commands.len() > 0 { 
+                    let current_command = &memory_comp.commands[memory_comp.program_counter as usize];
+                    match current_command {
+			Command::MoveP(P) => {
+                            println!("Moving: {}, {}", P.x, P.y);
+                            match new_game_state.positions.get_mut(&e) {
+				Some(mut t) => {
+				    movement_system(&e, &mut new_game_state.positions,
+						    &mut new_game_state.collision,
+						    P.clone());
+				}
+				None => {
+                                    todo!("Moving an unpositional object")
+				}
                             }
-                            None => {
-                                todo!("Moving an unpositional object")
-                            }
-                        }
+			}
+			Command::MoveD(D) => {
+                            println!("Moving: {:#?}", D)
+			}
+			_ => {
+                            todo!("Unhandled command")
+			}
                     }
-                    Command::MoveD(D) => {
-                        println!("Moving: {:#?}", D)
-                    }
-                    _ => {
-                        todo!("Unhandled command")
-                    }
-                }
 
-                memory_comp.program_counter += 1;
-                if (memory_comp.program_counter as usize) >= memory_comp.commands.len() {
-                    memory_comp.program_counter = 0;
-                }
+                    memory_comp.program_counter += 1;
+                    if (memory_comp.program_counter as usize) >= memory_comp.commands.len() {
+			memory_comp.program_counter = 0;
+                    }
+		}
             }
             None => (),
         }
     }
 
-    // "movement"
-    for p in new_game_state.positions.components.iter_mut() {
-        // p.y += 1;
-    }
+    
 
     return new_game_state;
 }
