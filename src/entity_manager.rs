@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
-#[derive(PartialEq, Copy, Clone, Eq, Hash)]
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub struct Entity(pub u64);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EntityManager {
     // todo: remove pub
     pub entities: HashSet<Entity>,
@@ -47,7 +47,7 @@ mod tests {
 
     #[test]
     fn entity_create() {
-        let p = EntityManager::new();
+        let mut p = EntityManager::new();
         let new_e = p.create();
         let new_f = p.create();
         assert_ne!(new_e, new_f);

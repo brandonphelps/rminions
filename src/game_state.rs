@@ -215,6 +215,19 @@ impl GameState {
     }
 }
 
+// todo: move manhat distance to some other module. 
+// todo: how to make T only be valid for ints?
+// todo: do all data types need be same type? 
+// pub fn manhat_distance<T>(x1: T, y1: T, x2: T, y2: T) -> T
+// where
+//     T: std::ops::Sub<Output = T> + std::cmp::PartialOrd
+pub fn manhat_distance(x1: u16, y1: u16, x2: u16, y2: u16) -> u32
+{
+    let x_dist: i32 = (x1 as i16 - x2 as i16).into();
+    let y_dist: i32 = (y1 as i16 - y2 as i16).into();
+    x_dist.abs() as u32 + y_dist.abs() as u32
+}
+
 #[derive(Default, Clone)]
 pub struct Memory {
     // current value of program counter
@@ -225,8 +238,8 @@ pub struct Memory {
 }
 
 pub enum UserCommand {
-    // updates a specific entities memory with the following command.
-    load_command(Entity, Command),
+    /// updates a specific entities memory with the following command.
+    LoadCommand(Entity, Command),
 }
 
 pub struct GameInput {
@@ -256,7 +269,7 @@ mod tests {
     #[test]
     fn components() {
         let position_component_manager = ComponentManager::<Position>::new();
-        let p = EntityManager::new();
+        let mut p = EntityManager::new();
         let new_e = p.create();
         assert_eq!(new_e.0, 1);
 
@@ -266,7 +279,7 @@ mod tests {
     #[test]
     fn components_create() {
         let mut position_component_manager = ComponentManager::<Position>::new();
-        let p = EntityManager::new();
+        let mut p = EntityManager::new();
         let new_e = p.create();
         assert_eq!(new_e.0, 1);
 
@@ -295,7 +308,7 @@ mod tests {
     #[test]
     fn component_remove() {
         let mut position_component_manager = ComponentManager::<Position>::new();
-        let p = EntityManager::new();
+        let mut p = EntityManager::new();
         let new_e = p.create();
 
         {
@@ -307,6 +320,11 @@ mod tests {
         position_component_manager.remove(&new_e);
         assert_eq!(position_component_manager.contains(&new_e), false);
         assert_eq!(position_component_manager.components.len(), 0);
+    }
+
+    #[test]
+    fn manhat_dist() {
+	assert_eq!(2, manhat_distance(0, 0, 1, 1));
     }
 }
 
@@ -374,6 +392,28 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
         if !new_game_state.has_hive() {
             new_game_state.create_hive(0, 0);
         }
+    }
+
+    // todo: entities to load commands must be near the hive. 
+    for input_command in game_input.user_commands.iter() {
+	match input_command {
+	    UserCommand::LoadCommand(E, C) => { 
+		match new_game_state.positions.get(&E) {
+		    Some(t) => {
+			
+		    },
+		    None => (),
+		};
+
+
+		match new_game_state.memory.get_mut(&E) {
+		    Some(mut t) => {
+			t.commands.push(C.clone());
+		    },
+		    None => (),
+		}
+	    }
+	}
     }
 
     if game_input.create_unit {
