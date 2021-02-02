@@ -221,20 +221,29 @@ impl GameState {
 // pub fn manhat_distance<T>(x1: T, y1: T, x2: T, y2: T) -> T
 // where
 //     T: std::ops::Sub<Output = T> + std::cmp::PartialOrd
-pub fn manhat_distance(x1: u16, y1: u16, x2: u16, y2: u16) -> u32
+pub fn manhat_distance(x1: u32, y1: u32, x2: u32, y2: u32) -> u32
 {
-    let x_dist: i32 = (x1 as i16 - x2 as i16).into();
-    let y_dist: i32 = (y1 as i16 - y2 as i16).into();
+    let x_dist: i32 = (x1 as i32 - x2 as i32).into();
+    let y_dist: i32 = (y1 as i32 - y2 as i32).into();
     x_dist.abs() as u32 + y_dist.abs() as u32
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct Memory {
     // current value of program counter
     // points to the "next" command to run, thus is updated after the command
     // runs succesfully.
     program_counter: u32,
     commands: Vec<Command>,
+}
+
+impl Default for Memory {
+    fn default() -> Memory {
+	println!("Memory default impl");
+	Memory { program_counter: 0,
+		 commands: Vec::<Command>::new(),
+	}
+    }
 }
 
 pub enum UserCommand {
@@ -377,6 +386,14 @@ pub fn game_load() -> GameState {
     return new_game_state;
 }
 
+/// @breif helper function for spawning units as the corresponding position
+fn spawn_unit(game_state: &mut GameState, p: Position) {
+    let new_entity = game_state.entity_manager.create();
+    let mut pos_component = game_state.positions.create(&new_entity);
+    *pos_component = p;
+    game_state.memory.create(&new_entity);
+}
+
 // hive should be the only building that is non moveable.
 // all other "buildings" are moveable units.
 pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> GameState {
@@ -400,18 +417,23 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
 	    UserCommand::LoadCommand(E, C) => { 
 		match new_game_state.positions.get(&E) {
 		    Some(t) => {
-			
+			// 0, 0 is hive position
+			// has a range of 5. 
+			if manhat_distance(t.x, t.y, 0, 0) > 5 {
+			    println!("unable to load commands into entity as its far away");
+			}
+			else
+			{
+			    match new_game_state.memory.get_mut(&E) {
+				Some(mut t) => {
+				    t.commands.push(C.clone());
+				},
+				None => (),
+			    }
+			}
 		    },
 		    None => (),
 		};
-
-
-		match new_game_state.memory.get_mut(&E) {
-		    Some(mut t) => {
-			t.commands.push(C.clone());
-		    },
-		    None => (),
-		}
 	    }
 	}
     }
@@ -435,10 +457,7 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
         if is_colliding {
             println!("Cannot create new entity at same position as another");
         } else {
-            let new_entity = new_game_state.entity_manager.create();
-            let mut pos_component = new_game_state.positions.create(&new_entity);
-            pos_component.x = 0;
-            pos_component.y = 1;
+	    spawn_unit(&new_game_state, Position { x: 0, y: 1});
         }
     }
 
