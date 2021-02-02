@@ -14,6 +14,12 @@ pub struct Position {
     y: u32,
 }
 
+impl Position {
+    pub fn new(x: u32, y: u32) -> Position {
+	Position { x: x, y: y}
+    }
+}
+
 /// How much energy a specific entity contains.
 #[derive(Default, Clone)]
 pub struct EnergyLevel {
@@ -39,6 +45,8 @@ pub enum Command {
 
     /// used for extracting resources from the provided position.
     Harvest(Position),
+    /// Used for dropping the current holding items off
+    Deposit(Position),
 }
 
 /// Collision component, tracks if the the entity should collide.
@@ -266,6 +274,8 @@ impl Default for Memory {
 pub enum UserCommand {
     /// updates a specific entities memory with the following command.
     LoadCommand(Entity, Command),
+    /// clears and sets an entire program to the corresponding entity.
+    LoadProgram(Entity, Vec<Command>),
 }
 
 pub struct GameInput {
@@ -473,6 +483,33 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
     // todo: entities to load commands must be near the hive. 
     for input_command in game_input.user_commands.iter() {
 	match input_command {
+	    UserCommand::LoadProgram(E, Prog) => {
+		println!("Loading full program into {}", E.0);
+		match new_game_state.positions.get(&E) {
+		    Some(t) => {
+			// 0, 0 is hive position
+			// has a range of 5. 
+			if manhat_distance(t.x, t.y, 0, 0) > 5 {
+			    println!("unable to load commands into entity as its far away");
+			    // todo: need some sort of log listing and reporting to the user. 
+			}
+			else
+			{
+			    match new_game_state.memory.get_mut(&E) {
+				Some(mut t) => {
+				    t.commands.clear();
+				    let mut new_program = Prog.clone();
+				    t.commands.append(&mut new_program);
+				    // let new_program = Prog.clone();
+				    // t.commands.append(&mut (Prog.clone()));
+				},
+				None => (),
+			    }
+			}
+		    },
+		    None => (),
+		}
+	    },
 	    UserCommand::LoadCommand(E, C) => { 
 		match new_game_state.positions.get(&E) {
 		    Some(t) => {
