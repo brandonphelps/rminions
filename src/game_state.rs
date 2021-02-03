@@ -346,11 +346,6 @@ mod tests {
         assert_eq!(position_component_manager.contains(&new_e), false);
         assert_eq!(position_component_manager.components.len(), 0);
     }
-
-    #[test]
-    fn manhat_dist() {
-	assert_eq!(2, manhat_distance(0, 0, 1, 1));
-    }
 }
 
 // todo better name

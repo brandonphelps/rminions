@@ -82,5 +82,9 @@ mod tests {
 				       chunk[1].0, chunk[1].1), 1);
 	}
     }
-	 
+
+    #[test]
+    fn manhat_dist() {
+	assert_eq!(2, manhat_distance(0, 0, 1, 1));
+    }
 }
