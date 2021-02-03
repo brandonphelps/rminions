@@ -1,6 +1,4 @@
 
-use std::cmp;
-
 /// helper functions that aren't specific the app.
 
 // todo: how to make T only be valid for ints?

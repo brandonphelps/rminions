@@ -287,70 +287,7 @@ impl GameInput {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
 
-    #[test]
-    fn components() {
-        let position_component_manager = ComponentManager::<Position>::new();
-        let mut p = EntityManager::new();
-        let new_e = p.create();
-        assert_eq!(new_e.0, 1);
-
-        assert_eq!(position_component_manager.contains(&new_e), false);
-    }
-
-    #[test]
-    fn components_create() {
-        let mut position_component_manager = ComponentManager::<Position>::new();
-        let mut p = EntityManager::new();
-        let new_e = p.create();
-        assert_eq!(new_e.0, 1);
-
-        {
-            let pos = position_component_manager.create(&new_e);
-            pos.x = 10;
-            pos.y = 20;
-        }
-        assert_eq!(position_component_manager.contains(&new_e), true);
-
-        match position_component_manager.lookup.get(&new_e) {
-            Some(&t) => assert_eq!(t, 0 as usize),
-            None => assert_eq!(true, false),
-        };
-
-        assert_eq!(position_component_manager.contains(&new_e), true);
-
-        let pos = match position_component_manager.get(&new_e) {
-            Some(t) => t,
-            _ => panic!("Failed to get item"),
-        };
-        assert_eq!(pos.x, 10);
-        assert_eq!(pos.y, 20);
-    }
-
-    #[test]
-    fn component_remove() {
-        let mut position_component_manager = ComponentManager::<Position>::new();
-        let mut p = EntityManager::new();
-        let new_e = p.create();
-
-        {
-            let pos = position_component_manager.create(&new_e);
-            pos.x = 10;
-            pos.y = 20;
-        }
-
-        position_component_manager.remove(&new_e);
-        assert_eq!(position_component_manager.contains(&new_e), false);
-        assert_eq!(position_component_manager.components.len(), 0);
-    }
-}
-
-// todo better name
-/// function provides basic impl for moving a unit around
-fn unit_pathing(old_game_state: &GameState, new_game_state: &GameState) {}
 
 pub fn game_init() -> GameState {
     return GameState::new();
@@ -552,15 +489,10 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
                     match current_command {
 			Command::MoveP(P) => {
                             println!("Moving: {}, {}", P.x, P.y);
-                            match new_game_state.positions.get_mut(&e) {
-				Some(mut t) => {
-				    movement_system(&e, &mut new_game_state.positions,
-						    &mut new_game_state.collision,
-						    P.clone());
-				}
-				None => {
-                                    todo!("Moving an unpositional object")
-				}
+			    if new_game_state.positions.get(&e).is_some() {
+				movement_system(&e, &mut new_game_state.positions,
+						&mut new_game_state.collision,
+						P.clone());
                             }
 			}
 			Command::MoveD(D) => {
@@ -584,4 +516,72 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
     
 
     return new_game_state;
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn components() {
+        let position_component_manager = ComponentManager::<Position>::new();
+        let mut p = EntityManager::new();
+        let new_e = p.create();
+        assert_eq!(new_e.0, 1);
+
+        assert_eq!(position_component_manager.contains(&new_e), false);
+    }
+
+    #[test]
+    fn components_create() {
+        let mut position_component_manager = ComponentManager::<Position>::new();
+        let mut p = EntityManager::new();
+        let new_e = p.create();
+        assert_eq!(new_e.0, 1);
+
+        {
+            let pos = position_component_manager.create(&new_e);
+            pos.x = 10;
+            pos.y = 20;
+        }
+        assert_eq!(position_component_manager.contains(&new_e), true);
+
+        match position_component_manager.lookup.get(&new_e) {
+            Some(&t) => assert_eq!(t, 0 as usize),
+            None => assert_eq!(true, false),
+        };
+
+        assert_eq!(position_component_manager.contains(&new_e), true);
+
+        let pos = match position_component_manager.get(&new_e) {
+            Some(t) => t,
+            _ => panic!("Failed to get item"),
+        };
+        assert_eq!(pos.x, 10);
+        assert_eq!(pos.y, 20);
+    }
+
+    #[test]
+    fn component_remove() {
+        let mut position_component_manager = ComponentManager::<Position>::new();
+        let mut p = EntityManager::new();
+        let new_e = p.create();
+
+        {
+            let pos = position_component_manager.create(&new_e);
+            pos.x = 10;
+            pos.y = 20;
+        }
+
+        position_component_manager.remove(&new_e);
+        assert_eq!(position_component_manager.contains(&new_e), false);
+        assert_eq!(position_component_manager.components.len(), 0);
+    }
+
+    #[test]
+    fn spawn_unit() {
+	
+    }
 }
