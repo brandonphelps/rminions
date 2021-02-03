@@ -1,26 +1,11 @@
 mod entity_manager;
 mod game_state;
+mod utils;
 
 use game_state::{UserCommand, Command, Position};
+use utils::{Path, generate_path};
 
 // todo: create gui implementation if a user wanted to play the game themselves.
-
-struct Path {
-    // should use position? 
-    path_points: Vec<(u32, u32)>
-}
-
-impl Path {
-    pub fn new() -> Path {
-	Path { path_points: Vec::new()}
-    }
-
-    pub fn add_return_path(&mut self) {
-	let mut p = self.path_points.clone();
-	let mut reverse = p.into_iter().rev().collect();
-	self.path_points.append(&mut reverse);
-    }
-}
 
 fn generate_pathing_program(path: &Path) -> Vec<Command> {
     let mut program = Vec::<Command>::new();
@@ -32,33 +17,6 @@ fn generate_pathing_program(path: &Path) -> Vec<Command> {
     return program;
 }
 
-/// naive direct path handling, no detection of things in the way in the slight est. 
-fn generate_path(start_pos: (u32, u32), end_pos: (u32, u32)) -> Path {
-    let mut r_path = Path::new();
-
-    let mut current_pos = start_pos;
-    while current_pos != end_pos {
-	let mut next_x = current_pos.0;
-	let mut next_y = current_pos.1;
-	if current_pos.0 < end_pos.0 {
-	     next_x = current_pos.0 + 1;
-	} else if current_pos.0 > end_pos.0 {
-	     next_x = current_pos.0 - 1;
-	} else {
-	    // movement is restricted to 1 tile at a time.
-	    // thus no diagional movement on this non best-agon grided layout
-	    // todo: change grid layout to best-agons
-	    if current_pos.1 < end_pos.1 {
-		next_y = current_pos.1 + 1;
-	    } else if current_pos.1 > end_pos.1 {
-		next_y = current_pos.1 - 1;
-	    }
-	}
-	current_pos = (next_x, next_y);
-	r_path.path_points.push(current_pos);
-    }
-    return r_path;
-}
 
 fn main() -> () {
     println!("Hello World: Asteroids is not currently providing a gui layer :(");

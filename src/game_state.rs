@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::entity_manager::{Entity, EntityManager};
+use crate::utils::{manhat_distance};
 
 //
 // visual width, visual height
@@ -240,18 +241,6 @@ impl GameState {
     }
 }
 
-// todo: move manhat distance to some other module. 
-// todo: how to make T only be valid for ints?
-// todo: do all data types need be same type? 
-// pub fn manhat_distance<T>(x1: T, y1: T, x2: T, y2: T) -> T
-// where
-//     T: std::ops::Sub<Output = T> + std::cmp::PartialOrd
-pub fn manhat_distance(x1: u32, y1: u32, x2: u32, y2: u32) -> u32
-{
-    let x_dist: i32 = (x1 as i32 - x2 as i32).into();
-    let y_dist: i32 = (y1 as i32 - y2 as i32).into();
-    x_dist.abs() as u32 + y_dist.abs() as u32
-}
 
 #[derive(Clone)]
 pub struct Memory {
