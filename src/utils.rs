@@ -1,4 +1,6 @@
 
+use std::cmp;
+
 /// helper functions that aren't specific the app.
 
 // todo: how to make T only be valid for ints?
@@ -14,6 +16,8 @@ pub fn manhat_distance(x1: u32, y1: u32, x2: u32, y2: u32) -> u32
 }
 
 
+
+
 pub struct Path {
     // should use position? 
     pub path_points: Vec<(u32, u32)>
@@ -26,6 +30,7 @@ impl Path {
 
     pub fn add_return_path(&mut self) {
 	let mut p = self.path_points.clone();
+	p.pop();
 	let mut reverse = p.into_iter().rev().collect();
 	self.path_points.append(&mut reverse);
     }
@@ -93,9 +98,8 @@ mod tests {
 	}
     }
 
-
     #[test]
-    fn test_path_reverse_no_repeat() {
+    fn test_path_no_repeat() {
 	let mut result_p = generate_path((0, 0), (10, 3));
 	let mut p = result_p.path_points.pop();
 	while p.is_some() { 
@@ -107,6 +111,19 @@ mod tests {
 		//assert_eq!(p.unwrap(), p2);
 	    }
 	    p = result_p.path_points.pop();
+	}
+    }
+
+    #[test]
+    /// check against that when flipping the path no neighrs are next to each other
+    /// regular repeats will occur. 
+    fn test_path_reverse_no_neighbor_repeat() {
+	let mut result_p = generate_path((0, 0), (10, 3));
+	result_p.add_return_path();
+	for chunk in result_p.path_points.windows(2) {
+	    if chunk.len() == 2 {
+		assert_ne!(chunk[0], chunk[1]);
+	    }
 	}
     }
 
