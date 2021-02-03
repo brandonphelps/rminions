@@ -81,6 +81,33 @@ mod tests {
 	    assert_eq!(manhat_distance(chunk[0].0, chunk[0].1,
 				       chunk[1].0, chunk[1].1), 1);
 	}
+	assert_eq!(result_p.path_points.len(), 10);
+    }
+
+    #[test]
+    fn test_path_step_distance_one_angles() {
+	let result_p = generate_path((0, 0), (10, 10));
+	for chunk in result_p.path_points.chunks(2) {
+	    assert_eq!(manhat_distance(chunk[0].0, chunk[0].1,
+				       chunk[1].0, chunk[1].1), 1);
+	}
+    }
+
+
+    #[test]
+    fn test_path_reverse_no_repeat() {
+	let mut result_p = generate_path((0, 0), (10, 3));
+	let mut p = result_p.path_points.pop();
+	while p.is_some() { 
+	    for p2 in result_p.path_points.iter() {
+		let k = p.unwrap();
+		assert_eq!(k.0 == p2.0 && k.1 == p2.1, false);
+		// todo: why is this not okay?
+		// can't do this "expected tuple, found a &(u32, u32)???
+		//assert_eq!(p.unwrap(), p2);
+	    }
+	    p = result_p.path_points.pop();
+	}
     }
 
     #[test]
