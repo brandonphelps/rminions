@@ -3,6 +3,7 @@ mod game_state;
 mod utils;
 
 use game_state::{UserCommand, Command, Position};
+use entity_manager::{Entity};
 use utils::{Path, generate_path};
 
 // todo: create gui implementation if a user wanted to play the game themselves.
@@ -47,9 +48,12 @@ fn main() -> () {
 	for e in current_state.get_units() {
 	    println!("Available entities: {}", e.0);
 	    if e.0 == newly_spawned_entity_id {
-		let mut path = generate_path((0, 1), iron_pos);
-		path.add_return_path();
-		let prog = generate_pathing_program(&path);
+		let path = generate_path((0, 1), iron_pos);
+
+		let mut prog = generate_pathing_program(&path);
+		let mut return_path = generate_pathing_program(&generate_path(iron_pos, (0, 1)));
+		prog.push(Command::Harvest(Entity(2)));
+		prog.append(&mut return_path);
 		game_input.user_commands.push(UserCommand::LoadProgram(*e, prog));
 	    }
 	}

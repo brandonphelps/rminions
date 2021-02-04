@@ -9,7 +9,7 @@ use crate::utils::{manhat_distance};
 
 // Components
 /// Position component, tracks the x, y of an entity.
-#[derive(Default, Clone)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub struct Position {
     x: u32,
     y: u32,
@@ -50,9 +50,9 @@ pub enum Command {
     MoveD(Direction),
 
     /// used for extracting resources from the provided position.
-    Harvest(Position),
+    Harvest(Entity),
     /// Used for dropping the current holding items off
-    Deposit(Position),
+    Deposit(Entity), // just the inverse of harvest is needed?
 }
 
 /// Collision component, tracks if the the entity should collide.
@@ -324,6 +324,11 @@ pub fn game_load() -> GameState {
         let mut p = new_game_state.positions.create(&iron_e);
         p.x = 10;
         p.y = 5;
+    }
+
+    {
+	let mut p = new_game_state.collision.create(&iron_e);
+	p.value = true;
     }
 
     // unit
@@ -719,7 +724,6 @@ mod tests {
 	    unit_s.iron_count = 0;
 	}
 
-
 	
 	let mut iron_node = entity_manager.create();
 	{
@@ -740,5 +744,45 @@ mod tests {
 
 	let unit_s = solid_c.get(&unit).unwrap();
 	assert_eq!(unit_s.iron_count, 1);
+    }
+
+    #[test]
+    fn test_movement_system() {
+	let mut entity_manager = EntityManager::new();
+
+	let mut unit = entity_manager.create();
+	let mut pos_c = ComponentManager::<Position>::new();
+	let mut solid_c = ComponentManager::<Collision>::new();
+
+	// unit
+	{ 
+	    let mut unit_p = pos_c.create(&unit);
+	    unit_p.x = 0;
+	    unit_p.y = 0;
+	}
+	{
+	    let mut unit_s = solid_c.create(&unit);
+	    unit_s.value = true;
+	}
+	
+	let mut iron_node = entity_manager.create();
+	{
+	    let mut iron_p = pos_c.create(&iron_node);
+	    iron_p.x = 0;
+	    iron_p.y = 1;
+	}
+	{
+	    let mut iron_s = solid_c.create(&iron_node);
+	    iron_s.value = true;
+	}
+
+	movement_system(&unit, &mut pos_c, &mut solid_c, Position { x: 0, y: 1 });
+
+	let iron_s = pos_c.get(&iron_node).unwrap();
+	assert_eq!(*iron_s, Position {x : 0, y: 1});
+
+
+	let unit_s = pos_c.get(&unit).unwrap();
+	assert_eq!(*unit_s, Position {x: 0, y: 0});
     }
 }
