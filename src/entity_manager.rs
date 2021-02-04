@@ -26,7 +26,10 @@ impl EntityManager {
         return new_id;
     }
 
-    // todo: how to export self.entities iter
+    // returns total number of current available entities. 
+    pub fn count(&self) -> usize {
+	return self.entities.len();
+    }
 }
 
 #[cfg(test)]
@@ -51,5 +54,11 @@ mod tests {
         let new_e = p.create();
         let new_f = p.create();
         assert_ne!(new_e, new_f);
+    }
+
+    #[test]
+    fn base_entity_manager() {
+	let p = EntityManager::new();
+	assert_eq!(p.count(), 0);
     }
 }

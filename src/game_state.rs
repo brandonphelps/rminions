@@ -28,7 +28,12 @@ pub struct EnergyLevel {
 }
 
 /// Indicates the item that a individual can hold of something.
-pub struct Container {}
+/// Storage of solids. 
+#[derive(Default, Clone, Debug)]
+pub struct SolidContainer {
+    iron_count: u32,
+    copper_count: u32,
+}
 
 #[derive(Debug, Clone)]
 pub enum Direction {
@@ -71,7 +76,7 @@ pub struct MineableNode {
     initial_amount: u32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ComponentManager<T> {
     components: Vec<T>,
     entities: Vec<Entity>,
@@ -114,6 +119,11 @@ where
         self.lookup.insert(*entity, entity_index);
 
         return &mut self.components[entity_index];
+    }
+
+    /// Create a component with the initial value as specified by init_v. 
+    fn create_with(&mut self, entity: &Entity, init_v: &T) -> &mut T {
+	todo!();
     }
 
     fn get(&self, entity: &Entity) -> Option<&T> {
@@ -160,6 +170,7 @@ pub struct GameState {
     hive_entity: Option<Entity>,
     iron_mines: ComponentManager<MineableNode>,
     memory: ComponentManager<Memory>,
+    solid_containers: ComponentManager<SolidContainer>,
 }
 
 impl GameState {
@@ -172,6 +183,7 @@ impl GameState {
             collision: ComponentManager::<Collision>::new(),
             iron_mines: ComponentManager::<MineableNode>::new(),
             memory: ComponentManager::<Memory>::new(),
+	    solid_containers: ComponentManager::<SolidContainer>::new(),
         }
     }
 
@@ -343,12 +355,91 @@ fn spawn_unit(game_state: &mut GameState, p: Position) {
     *pos_component = p;
     game_state.memory.create(&new_entity);
     game_state.collision.create(&new_entity);
+    game_state.solid_containers.create(&new_entity);
 }
 
 
 //
 fn spawn_mineable<F>(game_state: &mut GameState, p: Position, node_type: F) {
     todo!("Spawn a node of type F");
+}
+
+// todo: harvest might be just switchable to "transfer from one entity to another"
+// harvest entity is the entity that is being harvested. 
+// harvest type marks which item to pull out of the harvest entity
+fn harvest_system(entity: &Entity,
+		  positions: &mut ComponentManager<Position>,
+		  solid_containers: &mut ComponentManager<SolidContainer>,
+		  harvest_entity: &Entity,
+		  harvest_type: &str) {
+
+    // todo: do the error handling. 
+    let entity_pos = positions.get(entity).unwrap();
+    let harvest_pos = positions.get(harvest_entity).unwrap();
+
+    if manhat_distance(entity_pos.x, entity_pos.y,
+		       harvest_pos.x, harvest_pos.y) > 2 {
+
+	return;
+    }
+
+    // amount checking. 
+    match solid_containers.get(harvest_entity) {
+	Some(harvest_container) => {
+	    if harvest_type == "iron" {
+		if harvest_container.iron_count <= 0 {
+		    // harvest entity is out of resources. 
+		    return;
+		}
+	    }
+	},
+	None => {
+	    // harvest entity doesn't have an associated container to pull from. 
+	    return;
+	}
+    }
+    
+
+    {
+	let mut harvest_c =  solid_containers.get_mut(harvest_entity).unwrap();
+	if harvest_type == "iron" {
+	    harvest_c.iron_count -= 1;
+	}
+    }
+
+    {
+	let mut entity_c = solid_containers.get_mut(entity).unwrap();
+	if harvest_type == "iron" {
+	    entity_c.iron_count += 1;
+	}
+    }
+
+    // can't do this do to barrow system. 
+    // // todo: error handling.
+    // match solid_containers.get_mut(entity) {
+    // 	Some(mut entity_container) => {
+    // 	    match solid_containers.get_mut(harvest_entity) {
+    // 		Some(mut harvest_container) => {
+    // 		    // harvest_container.iron_count -= 1;
+    // 		    // entity_container.iron_count += 1;
+    // 		},
+    // 		None => (),
+    // 	    }
+    // 	},
+    // 	None => (),
+    // };
+    
+    // // ensure entity_container isn't full. 
+    // // if entity_container.
+
+    // can't do this, but can do with matches? lifetime stuff is icky?
+    // // todo: don't use string, likely use enum
+    // if harvest_type == "iron" {
+    // 	if harvest_container.iron_count > 0 {
+    // 	    harvest_container.iron_count -= 1;
+    // 	    entity_container.iron_count += 1;
+    // 	}
+    // }
 }
 
 // not all items that have positions are moveable, should there exist moveable componetns?
@@ -456,27 +547,29 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
 	}
     }
 
-    if game_input.create_unit {
-        // if entity exists at pos_component (0, 1) then we can't spawn if that entity has collision.
-        let mut is_colliding = false;
-        for tmp_e in new_game_state.entity_manager.entities.iter() {
-            match new_game_state.positions.get(&tmp_e) {
-                Some(t) => {
-                    if t.x == 0 && t.y == 1 {
-                        is_colliding = true;
-                    } else {
-                        is_colliding = false;
+    if new_game_state.has_hive() { 
+	if game_input.create_unit {
+            // if entity exists at pos_component (0, 1) then we can't spawn if that entity has collision.
+            let mut is_colliding = false;
+            for tmp_e in new_game_state.entity_manager.entities.iter() {
+		match new_game_state.positions.get(&tmp_e) {
+                    Some(t) => {
+			if t.x == 0 && t.y == 1 {
+                            is_colliding = true;
+			} else {
+                            is_colliding = false;
+			}
                     }
-                }
-                None => is_colliding = false,
+                    None => is_colliding = false,
+		}
             }
-        }
 
-        if is_colliding {
-            println!("Cannot create new entity at same position as another");
-        } else {
-	    spawn_unit(&mut new_game_state, Position { x: 0, y: 1});
-        }
+            if is_colliding {
+		println!("Cannot create new entity at same position as another");
+            } else {
+		spawn_unit(&mut new_game_state, Position { x: 0, y: 1});
+            }
+	}
     }
 
     for e in new_game_state.entity_manager.entities.iter() {
@@ -498,6 +591,17 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
 			Command::MoveD(D) => {
                             println!("Moving: {:#?}", D)
 			}
+			// // todo: should P be entity id of the item to harvest? 
+			// Command::Harvest(P) => {
+			//     // todo: check if unit is next to P
+			//     if new_game_state.positions.get(&e).is_some() {
+			// 	harvest_system(&e,
+			// 		       &mut new_game_state.positions,
+			// 		       &mut new_game_state.solid_containers,
+					       
+			// 	);
+			//     }
+			// }
 			_ => {
                             todo!("Unhandled command")
 			}
@@ -582,6 +686,59 @@ mod tests {
 
     #[test]
     fn spawn_unit() {
+	let mut game_state = game_init();
+	let mut game_input = GameInput::default();
+	game_input.create_unit = true;
+
+	game_state = game_update(game_state, 0.1, &game_input);
+
+	// can't create entities if hive isn't a thing
+	assert_eq!(game_state.entity_manager.count(), 0);
+    }
+
+    // todo: add in many of the failure cases. 
+    #[test]
+    fn test_harvest_system() {
+	let mut entity_manager = EntityManager::new();
+
+	let mut unit = entity_manager.create();
+	let mut pos_c = ComponentManager::<Position>::new();
 	
+	
+
+	let mut solid_c = ComponentManager::<SolidContainer>::new();
+
+	// unit
+	{ 
+	    let mut unit_p = pos_c.create(&unit);
+	    unit_p.x = 0;
+	    unit_p.y = 0;
+	}
+	{
+	    let mut unit_s = solid_c.create(&unit);
+	    unit_s.iron_count = 0;
+	}
+
+
+	
+	let mut iron_node = entity_manager.create();
+	{
+	    let mut iron_p = pos_c.create(&iron_node);
+	    iron_p.x = 0;
+	    iron_p.y = 1;
+	}
+	{
+	    let mut iron_s = solid_c.create(&iron_node);
+	    iron_s.iron_count = 100;
+	}
+
+	harvest_system(&unit, &mut pos_c, &mut solid_c, &iron_node, "iron");
+
+	let iron_s = solid_c.get(&iron_node).unwrap();
+	assert_eq!(iron_s.iron_count, 99);
+
+
+	let unit_s = solid_c.get(&unit).unwrap();
+	assert_eq!(unit_s.iron_count, 1);
     }
 }
