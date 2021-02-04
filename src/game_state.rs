@@ -247,6 +247,12 @@ impl GameState {
                 }
                 None => {}
             }
+	    match self.solid_containers.get(&entity) {
+		Some(t) => {
+		    res.push_str(&format!("\t I: {}\n", t.iron_count));
+		},
+		None => {}
+	    }
         }
 
         return res;
@@ -316,9 +322,8 @@ pub fn game_load() -> GameState {
     let iron_e = new_game_state.entity_manager.create();
 
     {
-        let mut p = new_game_state.iron_mines.create(&iron_e);
-        p.current_amount = 900;
-        p.initial_amount = 900;
+        let mut p = new_game_state.solid_containers.create(&iron_e);
+        p.iron_count = 900;
     }
     {
         let mut p = new_game_state.positions.create(&iron_e);
@@ -384,7 +389,7 @@ fn harvest_system(entity: &Entity,
 
     if manhat_distance(entity_pos.x, entity_pos.y,
 		       harvest_pos.x, harvest_pos.y) > 2 {
-
+	println!("Failed to harvest due to being to far away");
 	return;
     }
 
@@ -394,6 +399,7 @@ fn harvest_system(entity: &Entity,
 	    if harvest_type == "iron" {
 		if harvest_container.iron_count <= 0 {
 		    // harvest entity is out of resources. 
+		    println!("Failed to harvest since mine is empty"); 
 		    return;
 		}
 	    }
@@ -607,6 +613,15 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
 			// 	);
 			//     }
 			// }
+			Command::Harvest(E) => {
+			    if new_game_state.positions.get(&e).is_some() {
+				harvest_system(&e,
+					       &mut new_game_state.positions,
+					       &mut new_game_state.solid_containers,
+					       &E,
+					       "iron");
+			    }
+			},
 			_ => {
                             todo!("Unhandled command")
 			}
