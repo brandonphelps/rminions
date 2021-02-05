@@ -55,8 +55,12 @@ fn main() -> () {
 	for event in event_pump.poll_iter() {
 
 	    match event {
-		// todo: add handling.
+		Event::Quit { .. } | Event::KeyDown {
+		    keycode: Some(Keycode::Escape),
+		    ..
+		} => { break },
 		_ => {}
+
 	    };
 	    
 	}
@@ -97,6 +101,12 @@ fn main() -> () {
 	game_state::game_sdl2_render(&current_state, &mut canvas);
 
 	canvas.present();
+
+	use std::{thread, time};
+
+	let ten_millis = time::Duration::from_millis(1000);
+	
+	thread::sleep(ten_millis);
 
         println!("game state {}\n{}", frame, current_state.string());
 

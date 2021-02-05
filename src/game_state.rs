@@ -674,8 +674,8 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
 
     
     // todo: game state should have a world bounds. 
-    for x_pos in 0..10 {
-	for y_pos in 0..10 {
+    for x_pos in 0..20 {
+	for y_pos in 0..20 {
 
 	    // fill rect operates in visible pixel space.
 	    // todo: have function for translate between pixel space -> world space and vise versa.
@@ -690,11 +690,23 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
     }
 
 
+    canvas.set_draw_color(Color::RGB(255, 0, 0));
+
     // draw units ontop of grid.
     for entity in game_state.entity_manager.entities.iter() {
-
+	println!("Drawing entity: {}", entity.0);
+	match game_state.positions.get(&entity) {
+	    Some(pos) => {
+		// where to draw.
+		let p = canvas.fill_rect(Rect::new(
+		    (pos.x * pixel_tile_width) as i32,
+		    (pos.y * pixel_tile_height) as i32,
+		    10, 10));
+		// how to determine what to draw? 
+	    },
+	    None => (),
+	}
     }
-    
 }
 
 
