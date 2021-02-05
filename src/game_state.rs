@@ -2,12 +2,9 @@ use std::collections::HashMap;
 
 // todo: remove unused imports. 
 use sdl2;
-use sdl2::event::Event;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
-use sdl2::EventPump;
 
-use sdl2::keyboard::Keycode;
 use sdl2::render::{Canvas, Texture, TextureCreator};
 use sdl2::video::{Window, WindowContext};
 
@@ -682,11 +679,13 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
 
 	    // fill rect operates in visible pixel space.
 	    // todo: have function for translate between pixel space -> world space and vise versa.
+
 	    let p = canvas.fill_rect(Rect::new(
-		x_pos as i32,
-		y_pos as i32,
-		pixel_tile_width,
-		pixel_tile_height));
+		(x_pos * pixel_tile_width) as i32,
+		(y_pos * pixel_tile_height) as i32,
+		// allows for a margin to be created if less than pixel_tile_width / 
+		20,
+		20));
 	}
     }
 
