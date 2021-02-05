@@ -1,5 +1,17 @@
 use std::collections::HashMap;
 
+// todo: remove unused imports. 
+use sdl2;
+use sdl2::event::Event;
+use sdl2::pixels::Color;
+use sdl2::rect::{Point, Rect};
+use sdl2::EventPump;
+
+use sdl2::keyboard::Keycode;
+use sdl2::render::{Canvas, Texture, TextureCreator};
+use sdl2::video::{Window, WindowContext};
+
+
 use crate::entity_manager::{Entity, EntityManager};
 use crate::utils::{manhat_distance};
 
@@ -196,6 +208,10 @@ impl GameState {
                     .create(&(self.hive_entity.expect("Failed to create entity")));
                 p.x = x;
                 p.y = y;
+
+		let mut f = self.solid_containers.create(&(self.hive_entity.expect("Faile to build hive")));
+		f.iron_count = 0;
+		f.copper_count = 0;
             }
             _ => (),
         };
@@ -304,8 +320,6 @@ impl GameInput {
         }
     }
 }
-
-
 
 pub fn game_init() -> GameState {
     return GameState::new();
@@ -622,6 +636,16 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
 					       "iron");
 			    }
 			},
+
+			Command::Deposit(E) => {
+			    if new_game_state.positions.get(&E).is_some() {
+				harvest_system(&E,
+					       &mut new_game_state.positions,
+					       &mut new_game_state.solid_containers,
+					       &e,
+					       "iron");
+			    }
+			}
 			_ => {
                             todo!("Unhandled command")
 			}
@@ -642,6 +666,37 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
     return new_game_state;
 }
 
+// likely can be moved to another file. 
+// #[cfg(feature = "gui")]
+pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> () {
+    canvas.set_draw_color(Color::RGB(0, 255, 0));
+
+    // draw grid.
+    let pixel_tile_width = 30;
+    let pixel_tile_height = 30;
+
+    
+    // todo: game state should have a world bounds. 
+    for x_pos in 0..10 {
+	for y_pos in 0..10 {
+
+	    // fill rect operates in visible pixel space.
+	    // todo: have function for translate between pixel space -> world space and vise versa.
+	    let p = canvas.fill_rect(Rect::new(
+		x_pos as i32,
+		y_pos as i32,
+		pixel_tile_width,
+		pixel_tile_height));
+	}
+    }
+
+
+    // draw units ontop of grid.
+    for entity in game_state.entity_manager.entities.iter() {
+
+    }
+    
+}
 
 
 #[cfg(test)]

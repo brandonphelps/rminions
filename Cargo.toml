@@ -7,9 +7,8 @@ edition = "2018"
 
 [features]
 default = []
-gui = ["sdl2"]
+# gui = ["sdl2"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 rand="0.7.3"
@@ -18,4 +17,4 @@ rand="0.7.3"
 version="0.34"
 default-features = false
 features = ["ttf", "image"]
-optional = true
+optional = false
