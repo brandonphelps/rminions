@@ -34,22 +34,17 @@ pub struct Position {
 }
 
 /// @brief
-/// meter_to_pixels: for each 1 meter how many pixels to correlate to. 
-pub fn world_to_display(pos: &Position, meter_to_pixels: u16,
-			tile_width_meters: u16, tile_height_meters: u16) -> (i32, i32) {
-    let mut x_pos: i32 = 0;
-    let mut y_pos: i32 = 0;
+/// position is in meters (world units)
+/// p / m
+/// 10 p / 1 m == 10 pixels foreach meeter thus |<--->| == 1 meter and 10 pixels
+pub fn world_to_display(pos: &Position, pixels_per_meter: u16) -> (i32, i32) {
 
-    let tile_pos_x = (tile_width_meters as f32 * (pos.x as f32 + (pos.offset.x / 100.0)));
-    let tile_pos_y = (tile_height_meters as f32 * (pos.y as f32 + (pos.offset.y / 100.0)));
+    let tile_pos_x = pos.x as f32 + (pos.offset.x / 100.0);
+    let tile_pos_y = pos.y as f32 + (pos.offset.y / 100.0);
+    println!("tile pos: {}", tile_pos_x);
 
-    // let x_offset = (pos.offset.x * tile_width_meters as f32) as u32;
-    // let y_offset = (pos.offset.y * tile_height_meters as f32) as u32;
-
-    x_pos = (tile_pos_x * meter_to_pixels as f32) as i32;
-    y_pos = (tile_pos_y * meter_to_pixels as f32) as i32;
-    
-
+    let x_pos: i32 = (tile_pos_x * pixels_per_meter as f32) as i32;
+    let y_pos: i32 = (tile_pos_y * pixels_per_meter as f32) as i32;
     return (x_pos, y_pos);
 }
 
@@ -85,11 +80,8 @@ impl Position {
         p.offset = PosOffset { x: x_remainder_over, y: y_remainder_over};
         return p;
     }
-    
 
     pub fn add(&self, other: &Self) -> Self {
-	println!("{} {}", other.offset.x, self.offset.x);
-
 	let x_off = other.offset.x + self.offset.x;
 	let y_off = other.offset.y + self.offset.y;
 
@@ -732,19 +724,26 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
     // display aspect. 
     let pixel_tile_width = 30;
     let pixel_tile_height = 30;
+    let tile_width_meters = 5;
+    let tile_height_meters = 5;
+
+    let pixels_per_meter = 10;
 
     // todo: game state should have a world bounds.
     for x_pos in 0..20 {
         for y_pos in 0..20 {
             // fill rect operates in visible pixel space.
             // todo: have function for translate between pixel space -> world space and vise versa.
+	    let tile_pos = Position::new(x_pos * tile_width_meters, y_pos * tile_height_meters);
+	    let tile_width = Position::new(tile_width_meters, tile_width_meters);
+	    let tile_draw = world_to_display(&tile_pos, pixels_per_meter);
+	    let tile_draw_w = world_to_display(&tile_width, pixels_per_meter);
 
-            let _p = canvas.fill_rect(Rect::new(
-                (x_pos * pixel_tile_width) as i32,
-                (y_pos * pixel_tile_height) as i32,
+            let _p = canvas.fill_rect(Rect::new(tile_draw.0,
+						tile_draw.1,
                 // allows for a margin to be created if less than pixel_tile_width /
-                20,
-                20,
+						(tile_draw_w.0 as u32) - 5,
+						(tile_draw_w.1 as u32) - 5,
             ));
         }
     }
@@ -757,7 +756,7 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
         match game_state.positions.get(&entity) {
             Some(pos) => {
                 // where to draw.
-		let vis_pos = world_to_display(pos, 1, pixel_tile_width, pixel_tile_height);
+		let vis_pos = world_to_display(pos, pixels_per_meter);
 
                 let _p = canvas.fill_rect(Rect::new(
                     vis_pos.0,
