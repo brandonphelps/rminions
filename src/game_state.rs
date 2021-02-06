@@ -3,10 +3,11 @@ use std::collections::HashMap;
 // todo: remove unused imports.
 use sdl2;
 use sdl2::pixels::Color;
-use sdl2::rect::{Point, Rect};
+use sdl2::rect::{Rect};
 
-use sdl2::render::{Canvas, Texture, TextureCreator};
-use sdl2::video::{Window, WindowContext};
+// Texture, TextureCreator
+use sdl2::render::{Canvas};
+use sdl2::video::{Window};
 
 use crate::entity_manager::{Entity, EntityManager};
 use crate::utils::manhat_distance;
@@ -57,9 +58,13 @@ pub struct SolidContainer {
 
 #[derive(Debug, Clone)]
 pub enum Direction {
+#[allow(dead_code)]
     North,
+#[allow(dead_code)]
     East,
+#[allow(dead_code)]
     South,
+#[allow(dead_code)]
     West,
 }
 
@@ -67,6 +72,7 @@ pub enum Direction {
 pub enum Command {
     /// used for moving to the next point.
     MoveP(Position),
+#[allow(dead_code)]
     MoveD(Direction),
 
     /// used for extracting resources from the provided position.
@@ -80,14 +86,6 @@ pub enum Command {
 #[derive(Clone, Default)]
 pub struct Collision {
     value: bool,
-}
-
-#[derive(Default)]
-pub struct Hive {
-    minerals: u32,
-    gas: u32,
-    iron: u32,
-    copper: u32,
 }
 
 #[derive(Default, Clone)]
@@ -142,7 +140,8 @@ where
     }
 
     /// Create a component with the initial value as specified by init_v.
-    fn create_with(&mut self, entity: &Entity, init_v: &T) -> &mut T {
+    #[allow(dead_code)]
+    fn create_with(&mut self, _entity: &Entity, _init_v: &T) -> &mut T {
         todo!();
     }
 
@@ -240,19 +239,16 @@ impl GameState {
         return self.entity_manager.entities.iter().collect();
     }
 
+    #[allow(dead_code)]
     pub fn get_mineable_nodes(&self) -> Vec<&Entity> {
         let mut result = Vec::new();
         for e in self.entity_manager.entities.iter() {
             match self.iron_mines.get(&e) {
-                Some(t) => result.push(e),
+                Some(_t) => result.push(e),
                 None => (),
             }
         }
         return result;
-    }
-
-    pub fn get_entity_pos(&self, entity: &Entity) -> Option<Position> {
-        todo!("returns a position if corresponding entity has a position");
     }
 
     // testing / debug
@@ -385,16 +381,11 @@ pub fn game_load() -> GameState {
 fn spawn_unit(game_state: &mut GameState, p: Position) {
     let new_entity = game_state.entity_manager.create();
     // todo: add collision detection to where the spawn point is located relative to the hive.
-    let mut pos_component = game_state.positions.create(&new_entity);
+    let pos_component = game_state.positions.create(&new_entity);
     *pos_component = p;
     game_state.memory.create(&new_entity);
     game_state.collision.create(&new_entity);
     game_state.solid_containers.create(&new_entity);
-}
-
-//
-fn spawn_mineable<F>(game_state: &mut GameState, p: Position, node_type: F) {
-    todo!("Spawn a node of type F");
 }
 
 // todo: harvest might be just switchable to "transfer from one entity to another"
@@ -504,7 +495,7 @@ fn movement_system(
 
     if !is_colliding {
         // its okay to move to new_pos.
-        let mut pos = positions
+        let pos = positions
             .get_mut(&entity)
             .expect(&(format!("an entity didn't have a position? entity id: {}", entity.0)));
         *pos = new_pos;
@@ -513,7 +504,7 @@ fn movement_system(
 
 // hive should be the only building that is non moveable.
 // all other "buildings" are moveable units.
-pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> GameState {
+pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> GameState {
     // this clone is cloning a &GameState and not a GameState?
     let mut new_game_state = game_state.clone();
 
@@ -542,7 +533,7 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
                             // todo: need some sort of log listing and reporting to the user.
                         } else {
                             match new_game_state.memory.get_mut(&E) {
-                                Some(mut t) => {
+                                Some(t) => {
                                     t.commands.clear();
                                     let mut new_program = Prog.clone();
                                     t.commands.append(&mut new_program);
@@ -566,7 +557,7 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
                             // todo: need some sort of log listing and reporting to the user.
                         } else {
                             match new_game_state.memory.get_mut(&E) {
-                                Some(mut t) => {
+                                Some(t) => {
                                     t.commands.push(C.clone());
                                 }
                                 None => (),
@@ -660,6 +651,7 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
                                 );
                             }
                         }
+			#[allow(unreachable_patterns)]
                         _ => {
                             todo!("Unhandled command")
                         }
@@ -693,7 +685,7 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
             // fill rect operates in visible pixel space.
             // todo: have function for translate between pixel space -> world space and vise versa.
 
-            let p = canvas.fill_rect(Rect::new(
+            let _p = canvas.fill_rect(Rect::new(
                 (x_pos * pixel_tile_width) as i32,
                 (y_pos * pixel_tile_height) as i32,
                 // allows for a margin to be created if less than pixel_tile_width /
@@ -711,7 +703,7 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
         match game_state.positions.get(&entity) {
             Some(pos) => {
                 // where to draw.
-                let p = canvas.fill_rect(Rect::new(
+                let _p = canvas.fill_rect(Rect::new(
                     (pos.x * pixel_tile_width) as i32,
                     (pos.y * pixel_tile_height) as i32,
                     10,
@@ -801,7 +793,7 @@ mod tests {
     fn test_harvest_system() {
         let mut entity_manager = EntityManager::new();
 
-        let mut unit = entity_manager.create();
+        let unit = entity_manager.create();
         let mut pos_c = ComponentManager::<Position>::new();
 
         let mut solid_c = ComponentManager::<SolidContainer>::new();
@@ -817,7 +809,7 @@ mod tests {
             unit_s.iron_count = 0;
         }
 
-        let mut iron_node = entity_manager.create();
+        let iron_node = entity_manager.create();
         {
             let mut iron_p = pos_c.create(&iron_node);
             iron_p.x = 0;
@@ -841,7 +833,7 @@ mod tests {
     fn test_movement_system() {
         let mut entity_manager = EntityManager::new();
 
-        let mut unit = entity_manager.create();
+        let unit = entity_manager.create();
         let mut pos_c = ComponentManager::<Position>::new();
         let mut solid_c = ComponentManager::<Collision>::new();
 
@@ -856,7 +848,7 @@ mod tests {
             unit_s.value = true;
         }
 
-        let mut iron_node = entity_manager.create();
+        let iron_node = entity_manager.create();
         {
             let mut iron_p = pos_c.create(&iron_node);
             iron_p.x = 0;

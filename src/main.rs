@@ -1,16 +1,15 @@
 mod entity_manager;
+mod collision;
 mod game_state;
 mod utils;
 
 use sdl2;
 use sdl2::event::Event;
-use sdl2::pixels::Color;
-use sdl2::rect::{Point, Rect};
-use sdl2::EventPump;
+// use sdl2::EventPump;
 
 use sdl2::keyboard::Keycode;
-use sdl2::render::{Canvas, Texture, TextureCreator};
-use sdl2::video::{Window, WindowContext};
+//use sdl2::render::{Canvas, Texture, TextureCreator};
+//use sdl2::video::{Window, WindowContext};
 
 use entity_manager::Entity;
 use game_state::{Command, Position, UserCommand};
