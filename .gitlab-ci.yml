@@ -1,0 +1,13 @@
+image: docker:latest
+
+
+build_job:
+  stage: build
+  script:
+    - ls
+    - echo "starting job..."
+
+    - echo job finished
+  only:
+    - feature/ci
+    - main
