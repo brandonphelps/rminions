@@ -26,9 +26,9 @@ impl EntityManager {
         return new_id;
     }
 
-    // returns total number of current available entities. 
+    // returns total number of current available entities.
     pub fn count(&self) -> usize {
-	return self.entities.len();
+        return self.entities.len();
     }
 }
 
@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn base_entity_manager() {
-	let p = EntityManager::new();
-	assert_eq!(p.count(), 0);
+        let p = EntityManager::new();
+        assert_eq!(p.count(), 0);
     }
 }
