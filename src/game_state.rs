@@ -3,12 +3,13 @@ use std::collections::HashMap;
 // todo: remove unused imports.
 use sdl2;
 use sdl2::pixels::Color;
-use sdl2::rect::{Rect};
+use sdl2::rect::Rect;
 
 // Texture, TextureCreator
-use sdl2::render::{Canvas};
-use sdl2::video::{Window};
+use sdl2::render::Canvas;
+use sdl2::video::Window;
 
+use crate::collision::Circle;
 use crate::entity_manager::{Entity, EntityManager};
 use crate::utils::manhat_distance;
 
@@ -32,13 +33,41 @@ pub struct Position {
     offset: PosOffset,
 }
 
+/// @brief
+/// meter_to_pixels: for each 1 meter how many pixels to correlate to. 
+pub fn world_to_display(pos: &Position, meter_to_pixels: u16,
+			tile_width_meters: u16, tile_height_meters: u16) -> (i32, i32) {
+    let mut x_pos: i32 = 0;
+    let mut y_pos: i32 = 0;
+
+    let tile_pos_x = (tile_width_meters as f32 * (pos.x as f32 + (pos.offset.x / 100.0)));
+    let tile_pos_y = (tile_height_meters as f32 * (pos.y as f32 + (pos.offset.y / 100.0)));
+
+    // let x_offset = (pos.offset.x * tile_width_meters as f32) as u32;
+    // let y_offset = (pos.offset.y * tile_height_meters as f32) as u32;
+
+    x_pos = (tile_pos_x * meter_to_pixels as f32) as i32;
+    y_pos = (tile_pos_y * meter_to_pixels as f32) as i32;
+    
+
+    return (x_pos, y_pos);
+}
+
+
 impl Position {
-    pub fn new(x: u32, y: u32) -> Position {
-        Position {
+    pub fn new(x: u32, y: u32) -> Self {
+        Self {
             x: x,
             y: y,
             offset: PosOffset { x: 0.0, y: 0.0 },
         }
+    }
+
+    /// @brief position, but without default
+    pub fn new_with_offset(x: u32, y: u32, x_off: f32, y_off: f32) -> Self {
+        let mut p = Self::new(x, y);
+        p.offset = PosOffset { x: x_off, y: y_off };
+        return p;
     }
 }
 
@@ -58,13 +87,13 @@ pub struct SolidContainer {
 
 #[derive(Debug, Clone)]
 pub enum Direction {
-#[allow(dead_code)]
+    #[allow(dead_code)]
     North,
-#[allow(dead_code)]
+    #[allow(dead_code)]
     East,
-#[allow(dead_code)]
+    #[allow(dead_code)]
     South,
-#[allow(dead_code)]
+    #[allow(dead_code)]
     West,
 }
 
@@ -72,7 +101,7 @@ pub enum Direction {
 pub enum Command {
     /// used for moving to the next point.
     MoveP(Position),
-#[allow(dead_code)]
+    #[allow(dead_code)]
     MoveD(Direction),
 
     /// used for extracting resources from the provided position.
@@ -86,6 +115,8 @@ pub enum Command {
 #[derive(Clone, Default)]
 pub struct Collision {
     value: bool,
+    // todo: change type to generic list of shapes, such as rectangles /circles etc.
+    bounding_box: Circle,
 }
 
 #[derive(Default, Clone)]
@@ -259,7 +290,7 @@ impl GameState {
             res.push_str(&format!("Entity: {}\n", entity.0));
             match self.positions.get(&entity) {
                 Some(t) => {
-                    res.push_str(&format!("\t P: {}, {}\n", t.x, t.y));
+                    res.push_str(&format!("\t P: {}, {}\n", (t.x as f32 + t.offset.x), (t.y as f32 + t.offset.y)));
                 }
                 None => {}
             };
@@ -357,23 +388,17 @@ pub fn game_load() -> GameState {
     }
 
     // unit
-    let new_entity = new_game_state.entity_manager.create();
-    println!("First unit!: {}", &new_entity.0);
-    let mut pos_component = new_game_state.positions.create(&new_entity);
-    pos_component.x = 0;
-    pos_component.y = 1;
+    // let new_entity = new_game_state.entity_manager.create();
+    // println!("First unit!: {}", &new_entity.0);
+    // let mut pos_component = new_game_state.positions.create(&new_entity);
+    // pos_component.x = 0;
+    // pos_component.y = 1;
 
-    let mut memory = new_game_state.memory.create(&new_entity);
-    memory
-        .commands
-        .push(Command::MoveP(Position::new(0, 4)));
-    memory
-        .commands
-        .push(Command::MoveP(Position::new(0, 5)));
-    memory
-        .commands
-        .push(Command::MoveP(Position::new(0, 7)));
-    memory.program_counter = 0;
+    // let mut memory = new_game_state.memory.create(&new_entity);
+    // memory.commands.push(Command::MoveP(Position::new(0, 4)));
+    // memory.commands.push(Command::MoveP(Position::new(0, 5)));
+    // memory.commands.push(Command::MoveP(Position::new(0, 7)));
+    // memory.program_counter = 0;
     return new_game_state;
 }
 
@@ -480,17 +505,21 @@ fn movement_system(
 
     // collision movement system.
     for e_collision in collisions.entities.iter() {
-        match positions.get(&e_collision) {
-            Some(t) => {
-                if t.x == new_pos.x && t.y == new_pos.y {
-                    println!("A collision has occured at {}, {}", t.x, t.y);
-                    is_colliding = true;
-                    break;
-                }
-            }
-            // this collision entity doesn't have a position.
-            None => (),
-        }
+	// only do collision detection on non myself entities.
+	// todo: some rust iterator thing for this? 
+	if e_collision != entity {
+            match positions.get(&e_collision) {
+		Some(t) => {
+		    if t.x == new_pos.x && t.y == new_pos.y {
+			println!("A collision has occured at {}, {}", t.x, t.y);
+			is_colliding = true;
+			break;
+		    }
+		},
+		// this collision entity doesn't have a position.
+		None => (),
+	    }
+	}
     }
 
     if !is_colliding {
@@ -498,7 +527,9 @@ fn movement_system(
         let pos = positions
             .get_mut(&entity)
             .expect(&(format!("an entity didn't have a position? entity id: {}", entity.0)));
+
         *pos = new_pos;
+	println!("Setting pos: {} {} {} {}", pos.x, pos.y, pos.offset.x, pos.offset.y);
     }
 }
 
@@ -522,9 +553,9 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
     // todo: entities to load commands must be near the hive.
     for input_command in game_input.user_commands.iter() {
         match input_command {
-            UserCommand::LoadProgram(E, Prog) => {
-                println!("Loading full program into {}", E.0);
-                match new_game_state.positions.get(&E) {
+            UserCommand::LoadProgram(entity_p, Prog) => {
+                println!("Loading full program into {}", entity_p.0);
+                match new_game_state.positions.get(&entity_p) {
                     Some(t) => {
                         // 0, 0 is hive position
                         // has a range of 5.
@@ -532,7 +563,7 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                             println!("unable to load commands into entity as its far away");
                             // todo: need some sort of log listing and reporting to the user.
                         } else {
-                            match new_game_state.memory.get_mut(&E) {
+                            match new_game_state.memory.get_mut(&entity_p) {
                                 Some(t) => {
                                     t.commands.clear();
                                     let mut new_program = Prog.clone();
@@ -547,8 +578,8 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                     None => (),
                 }
             }
-            UserCommand::LoadCommand(E, C) => {
-                match new_game_state.positions.get(&E) {
+            UserCommand::LoadCommand(entity_c, C) => {
+                match new_game_state.positions.get(&entity_c) {
                     Some(t) => {
                         // 0, 0 is hive position
                         // has a range of 5.
@@ -556,7 +587,7 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                             println!("unable to load commands into entity as its far away");
                             // todo: need some sort of log listing and reporting to the user.
                         } else {
-                            match new_game_state.memory.get_mut(&E) {
+                            match new_game_state.memory.get_mut(&entity_c) {
                                 Some(t) => {
                                     t.commands.push(C.clone());
                                 }
@@ -605,7 +636,7 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                         &memory_comp.commands[memory_comp.program_counter as usize];
                     match current_command {
                         Command::MoveP(P) => {
-                            println!("Moving: {}, {}", P.x, P.y);
+                            println!("Moving: {}, {}, {}, {}", P.x, P.y, P.offset.x, P.offset.y);
                             if new_game_state.positions.get(&e).is_some() {
                                 movement_system(
                                     &e,
@@ -618,17 +649,6 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                         Command::MoveD(D) => {
                             println!("Moving: {:#?}", D)
                         }
-                        // // todo: should P be entity id of the item to harvest?
-                        // Command::Harvest(P) => {
-                        //     // todo: check if unit is next to P
-                        //     if new_game_state.positions.get(&e).is_some() {
-                        // 	harvest_system(&e,
-                        // 		       &mut new_game_state.positions,
-                        // 		       &mut new_game_state.solid_containers,
-
-                        // 	);
-                        //     }
-                        // }
                         Command::Harvest(E) => {
                             if new_game_state.positions.get(&e).is_some() {
                                 harvest_system(
@@ -651,7 +671,7 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                                 );
                             }
                         }
-			#[allow(unreachable_patterns)]
+                        #[allow(unreachable_patterns)]
                         _ => {
                             todo!("Unhandled command")
                         }
@@ -676,6 +696,7 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
     canvas.set_draw_color(Color::RGB(0, 255, 0));
 
     // draw grid.
+    // display aspect. 
     let pixel_tile_width = 30;
     let pixel_tile_height = 30;
 
@@ -703,9 +724,11 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
         match game_state.positions.get(&entity) {
             Some(pos) => {
                 // where to draw.
+		let vis_pos = world_to_display(pos, 1, 30, 30);
+
                 let _p = canvas.fill_rect(Rect::new(
-                    (pos.x * pixel_tile_width) as i32,
-                    (pos.y * pixel_tile_height) as i32,
+                    vis_pos.0,
+                    vis_pos.1,
                     10,
                     10,
                 ));
@@ -866,5 +889,18 @@ mod tests {
 
         let unit_s = pos_c.get(&unit).unwrap();
         assert_eq!(*unit_s, Position::new(0, 0));
+    }
+
+    // todo: parameterisze testing
+    #[test]
+    fn test_world_to_display() {
+	let meter_to_pixels = 2;
+	assert_eq!(world_to_display(&Position::new(0, 0), meter_to_pixels, 16, 16), (0, 0));
+	assert_eq!(world_to_display(&Position::new(1, 0), meter_to_pixels, 16, 16), (32, 0));
+	assert_eq!(world_to_display(&Position::new(2, 0), meter_to_pixels, 16, 16), (64, 0));
+	assert_eq!(world_to_display(&Position::new(2, 1), meter_to_pixels, 16, 16), (64, 32));
+	
+	assert_eq!(world_to_display(&Position::new_with_offset(2, 1, 10.0, 0.0),
+				    meter_to_pixels, 16, 16), (67, 32));
     }
 }

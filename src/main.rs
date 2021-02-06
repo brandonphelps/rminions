@@ -1,5 +1,5 @@
-mod entity_manager;
 mod collision;
+mod entity_manager;
 mod game_state;
 mod utils;
 
@@ -20,8 +20,17 @@ use utils::{generate_path, Path};
 fn generate_pathing_program(path: &Path) -> Vec<Command> {
     let mut program = Vec::<Command>::new();
 
+    let pos_offset_dist: f32 = 10.0;
+
     for p in path.path_points.iter() {
-        program.push(Command::MoveP(Position::new(p.0, p.1)));
+        for k in 0..10 {
+            program.push(Command::MoveP(Position::new_with_offset(
+                p.0,
+                p.1,
+                k as f32 * pos_offset_dist,
+                k as f32 * pos_offset_dist,
+            )));
+        }
     }
 
     return program;
@@ -52,7 +61,7 @@ fn main() -> () {
 
     // todo: determine these programatically.
     let iron_pos = (10, 5);
-    let newly_spawned_entity_id = 4;
+    let newly_spawned_entity_id = 3;
 
     let mut frame = 0;
     while frame < 60 {
@@ -71,20 +80,19 @@ fn main() -> () {
 
         // set values get user input.
 
-        if frame == 1 {
-            game_input.create_hive = true;
-        }
+        // if frame == 1 {
+        //     game_input.create_hive = true;
+        // }
         if frame == 2 {
-            game_input.create_hive = true;
-        }
-
-        if frame == 4 || frame == 5 || frame == 6 {
             game_input.create_unit = true;
         }
 
+        // if frame == 4 || frame == 5 || frame == 6 {
+        //     game_input.create_unit = true;
+        // }
+
         // should be like get programable units.
         for e in current_state.get_units() {
-            println!("Available entities: {}", e.0);
             if e.0 == newly_spawned_entity_id {
                 let path = generate_path((0, 1), iron_pos);
 
