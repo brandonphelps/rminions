@@ -633,7 +633,6 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
 					       "iron");
 			    }
 			},
-
 			Command::Deposit(E) => {
 			    if new_game_state.positions.get(&E).is_some() {
 				harvest_system(&E,
@@ -642,7 +641,7 @@ pub fn game_update(game_state: GameState, dt: f64, game_input: &GameInput) -> Ga
 					       &e,
 					       "iron");
 			    }
-			}
+			},
 			_ => {
                             todo!("Unhandled command")
 			}

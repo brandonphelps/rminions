@@ -58,7 +58,7 @@ fn main() -> () {
 		Event::Quit { .. } | Event::KeyDown {
 		    keycode: Some(Keycode::Escape),
 		    ..
-		} => { break },
+		} => { frame = 60; },
 		_ => {}
 
 	    };
