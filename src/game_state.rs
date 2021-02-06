@@ -722,28 +722,23 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
 
     // draw grid.
     // display aspect. 
-    let pixel_tile_width = 30;
-    let pixel_tile_height = 30;
-    let tile_width_meters = 5;
-    let tile_height_meters = 5;
-
-    let pixels_per_meter = 10;
+    let pixels_per_meter: u16 = 30;
 
     // todo: game state should have a world bounds.
     for x_pos in 0..20 {
         for y_pos in 0..20 {
             // fill rect operates in visible pixel space.
             // todo: have function for translate between pixel space -> world space and vise versa.
-	    let tile_pos = Position::new(x_pos * tile_width_meters, y_pos * tile_height_meters);
-	    let tile_width = Position::new(tile_width_meters, tile_width_meters);
-	    let tile_draw = world_to_display(&tile_pos, pixels_per_meter);
-	    let tile_draw_w = world_to_display(&tile_width, pixels_per_meter);
+	    let vis_tile_pos = world_to_display(&Position::new(x_pos, y_pos), pixels_per_meter);
+	    // let tile_width = Position::new(tile_width_meters, tile_width_meters);
+	    // let tile_draw = world_to_display(&tile_pos, pixels_per_meter);
+	    // let tile_draw_w = world_to_display(&tile_width, pixels_per_meter);
 
-            let _p = canvas.fill_rect(Rect::new(tile_draw.0,
-						tile_draw.1,
+            let _p = canvas.fill_rect(Rect::new(vis_tile_pos.0,
+						vis_tile_pos.1,
                 // allows for a margin to be created if less than pixel_tile_width /
-						(tile_draw_w.0 as u32) - 5,
-						(tile_draw_w.1 as u32) - 5,
+						(pixels_per_meter - 5) as u32,
+						(pixels_per_meter - 5) as u32,
             ));
         }
     }
@@ -752,15 +747,14 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
 
     // draw units ontop of grid.
     for entity in game_state.entity_manager.entities.iter() {
-        println!("Drawing entity: {}", entity.0);
         match game_state.positions.get(&entity) {
             Some(pos) => {
                 // where to draw.
 		let vis_pos = world_to_display(pos, pixels_per_meter);
-
+		
                 let _p = canvas.fill_rect(Rect::new(
-                    vis_pos.0,
-                    vis_pos.1,
+                    vis_pos.0 as i32,
+                    vis_pos.1 as i32,
                     10,
                     10,
                 ));

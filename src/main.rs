@@ -32,7 +32,7 @@ fn generate_pathing_program(path: &Path) -> Vec<Command> {
     let mut program = Vec::<Command>::new();
 
     let pos_offset_dist: f32 = 1.0;
-    let speed = 1.0; // meters per second
+    let speed = 0.5; // meters per second
     let tile_width = 16;
     for p in path.path_points.iter() {
 	let mut current_pos = Position::new(p.0, p.1);
@@ -123,7 +123,7 @@ fn main() -> () {
 
         use std::{thread, time};
 
-        let ten_millis = time::Duration::from_millis(1000);
+        let ten_millis = time::Duration::from_millis(10);
 
         thread::sleep(ten_millis);
 
