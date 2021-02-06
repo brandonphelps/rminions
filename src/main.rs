@@ -12,31 +12,43 @@ use sdl2::keyboard::Keycode;
 //use sdl2::video::{Window, WindowContext};
 
 use entity_manager::Entity;
-use game_state::{Command, Position, UserCommand};
+use game_state::{Command, Position, UserCommand, world_to_display};
 use utils::{generate_path, Path};
 
 // todo: create gui implementation if a user wanted to play the game themselves.
 
+fn pos(vec: f64, t: f64, x: f64) -> f64 {
+    return vec * t + x;
+}
+
+fn Pos(vec: f64, t: f64, x: &Position) -> Position {
+    let delta = vec * t;
+    todo!();
+}
+
 fn generate_pathing_program(path: &Path) -> Vec<Command> {
     let mut program = Vec::<Command>::new();
 
-    let pos_offset_dist: f32 = 10.0;
-
+    let pos_offset_dist: f32 = 1.0;
+    let tile_width = 30.0;
     for p in path.path_points.iter() {
-        for k in 0..10 {
+	let mut k = 0.0;
+	while k < tile_width {
             program.push(Command::MoveP(Position::new_with_offset(
                 p.0,
                 p.1,
                 k as f32 * pos_offset_dist,
                 k as f32 * pos_offset_dist,
             )));
+	    k += pos_offset_dist;
         }
     }
 
     return program;
 }
 
-fn main() -> () {
+//fn main() -> () {
+fn test() -> () {
     println!("Hello World: Asteroids is not currently providing a gui layer :(");
 
     let sdl_context = sdl2::init().unwrap();
@@ -140,5 +152,28 @@ fn main() -> () {
                 _ => {}
             }
         }
+    }
+}
+
+fn pos_to_Pos(p: f32) -> Position {
+
+    return Position::new(0, 0);
+}
+
+
+
+fn main() -> () {
+    let mut current_pos: f64 = 0.0 ;
+    let mut currentPos = Position::new(0, 0);
+    let speed = 0.5;
+    for time_point in 0..10 {
+	let seconds = (time_point as f64);
+	
+	
+
+	println!("t: {}, Pos: {}", seconds, current_pos);
+	let displ = world_to_display(&Position::new_with_offset(current_pos as u32, 0, current_pos as f32, 0.0), 1, 16, 16);
+	println!("D: {} {}", displ.0, displ.1);
+	current_pos = pos(speed, (time_point as f64) * 0.1, current_pos);
     }
 }

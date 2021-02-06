@@ -53,7 +53,6 @@ pub fn world_to_display(pos: &Position, meter_to_pixels: u16,
     return (x_pos, y_pos);
 }
 
-
 impl Position {
     pub fn new(x: u32, y: u32) -> Self {
         Self {
@@ -65,9 +64,43 @@ impl Position {
 
     /// @brief position, but without default
     pub fn new_with_offset(x: u32, y: u32, x_off: f32, y_off: f32) -> Self {
-        let mut p = Self::new(x, y);
-        p.offset = PosOffset { x: x_off, y: y_off };
+
+	let mut p = Self::new(x, y);
+	let mut x_remainder_over = x_off;
+	let mut y_remainder_over = y_off;
+
+	if x_off >= 100.0 {
+	    let x_carry_over = x_off / 100.0;
+
+	    p.x += x_carry_over as u32;
+
+	    x_remainder_over = x_off % 100.0;
+	}
+	if y_off >= 100.0 {
+	    let y_carry_over = y_off / 100.0;
+	    p.y += y_carry_over as u32;
+	    y_remainder_over = y_off % 100.0;
+	}
+
+        p.offset = PosOffset { x: x_remainder_over, y: y_remainder_over};
         return p;
+    }
+    
+
+    pub fn add(&self, other: &Self) -> Self {
+	println!("{} {}", other.offset.x, self.offset.x);
+
+	let x_off = other.offset.x + self.offset.x;
+	let y_off = other.offset.y + self.offset.y;
+
+	Position::new_with_offset(self.x + other.x,
+				  self.y + other.y,
+				  x_off, y_off)
+    }
+
+    // todo: add subtraction. 
+    pub fn sub(&self, other: Self) -> Self {
+	todo!();
     }
 }
 
@@ -724,7 +757,7 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
         match game_state.positions.get(&entity) {
             Some(pos) => {
                 // where to draw.
-		let vis_pos = world_to_display(pos, 1, 30, 30);
+		let vis_pos = world_to_display(pos, 1, pixel_tile_width, pixel_tile_height);
 
                 let _p = canvas.fill_rect(Rect::new(
                     vis_pos.0,
@@ -895,12 +928,37 @@ mod tests {
     #[test]
     fn test_world_to_display() {
 	let meter_to_pixels = 2;
-	assert_eq!(world_to_display(&Position::new(0, 0), meter_to_pixels, 16, 16), (0, 0));
-	assert_eq!(world_to_display(&Position::new(1, 0), meter_to_pixels, 16, 16), (32, 0));
-	assert_eq!(world_to_display(&Position::new(2, 0), meter_to_pixels, 16, 16), (64, 0));
-	assert_eq!(world_to_display(&Position::new(2, 1), meter_to_pixels, 16, 16), (64, 32));
-	
-	assert_eq!(world_to_display(&Position::new_with_offset(2, 1, 10.0, 0.0),
-				    meter_to_pixels, 16, 16), (67, 32));
+	// assert_eq!(world_to_display(&Position::new(0, 0), meter_to_pixels, 16, 16), (0, 0));
+	// assert_eq!(world_to_display(&Position::new(1, 0), meter_to_pixels, 16, 16), (32, 0));
+	// assert_eq!(world_to_display(&Position::new(2, 0), meter_to_pixels, 16, 16), (64, 0));
+	// assert_eq!(world_to_display(&Position::new(2, 1), meter_to_pixels, 16, 16), (64, 32));
+	// assert_eq!(world_to_display(&Position::new_with_offset(2, 1, 10.0, 0.0),
+	// 			    meter_to_pixels, 16, 16), (67, 32));
+    }
+
+
+    #[test]
+    fn test_position_stuff() {
+	let p1 = Position::new(30, 2);
+	assert_eq!(p1, Position { x: 30, y: 2, offset: PosOffset { x: 0.0, y: 0.0 }});
+
+	let p2 = Position::new_with_offset(30, 2, 10.0, 2.0);
+	assert_eq!(p2, Position { x: 30, y: 2, offset: PosOffset { x: 10.0, y: 2.0 }});
+
+	let p3 = Position::new_with_offset(30, 2, 200.0, 2.0);
+	assert_eq!(p3, Position { x: 32, y: 2, offset: PosOffset { x: 0.0, y: 2.0 }});
+
+	let p4 = p2.add(&p3);
+	assert_eq!(p4.x, 62);
+	assert_eq!(p4.y, 4);
+
+	assert_eq!(p2.add(&p3), p3.add(&p2));
+
+	let p5 = p2.add(&Position::new_with_offset(30, 2, 90.0, 99.0));
+	assert_eq!(p5.x, 61);
+	// 2 + 2 + 1
+	assert_eq!(p5.y, 5);
+	assert_eq!(p5.offset.x, 0.0);
+
     }
 }
