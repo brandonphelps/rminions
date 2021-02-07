@@ -12,6 +12,7 @@ default = []
 
 [dependencies]
 rand="0.7.3"
+socketcan="*"
 
 [dependencies.sdl2]
 version="0.34"

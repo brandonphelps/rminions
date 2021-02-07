@@ -6,8 +6,9 @@ build_job:
   script:
     - ls
     - echo "starting job..."
-
+    - cargo build
     - echo job finished
   only:
     - feature/ci
+    - feature/socketcan
     - main
