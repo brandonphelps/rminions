@@ -31,6 +31,33 @@ impl Path {
     }
 }
 
+pub fn generate_path_step(start_pos: (f32, f32), end_pos: (f32, f32), delta: f32) -> Path {
+    let mut r_path = Path::new();
+
+    let mut current_pos = start_pos;
+    while current_pos != end_pos {
+        let mut next_x = current_pos.0;
+        let mut next_y = current_pos.1;
+        if current_pos.0 < end_pos.0 {
+            next_x = current_pos.0 + delta;
+        } else if current_pos.0 > end_pos.0 {
+            next_x = current_pos.0 - delta;
+        } else {
+            // movement is restricted to 1 tile at a time.
+            // thus no diagional movement on this non best-agon grided layout
+            // todo: change grid layout to best-agons
+            if current_pos.1 < end_pos.1 {
+                next_y = current_pos.1 + delta;
+            } else if current_pos.1 > end_pos.1 {
+                next_y = current_pos.1 - delta;
+            }
+        }
+        current_pos = (next_x, next_y);
+        r_path.path_points.push((current_pos.0 as u32, current_pos.1 as u32));
+    }
+    return r_path;    
+}
+
 /// naive direct path handling, no detection of things in the way in the slight est.
 pub fn generate_path(start_pos: (u32, u32), end_pos: (u32, u32)) -> Path {
     let mut r_path = Path::new();

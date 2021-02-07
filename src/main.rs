@@ -34,6 +34,7 @@ fn generate_pathing_program(path: &Path) -> Vec<Command> {
     let pos_offset_dist: f32 = 1.0;
     let speed = 0.5; // meters per second
     let tile_width = 16;
+
     for p in path.path_points.iter() {
 	let mut current_pos = Position::new(p.0, p.1);
         program.push(Command::MoveP(current_pos));
