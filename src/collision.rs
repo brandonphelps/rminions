@@ -6,7 +6,7 @@ struct Point {
     y: f64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct Circle {
     pub pos_x: f64,
     pub pos_y: f64,
@@ -109,7 +109,6 @@ pub fn collides(circle_one: &Circle, circle_two: &Circle) -> bool {
     let dist = ((dist_x * dist_x) + (dist_y * dist_y)).sqrt();
     return dist <= circle_one.radius + circle_two.radius;
 }
-
 
 #[cfg(test)]
 mod tests {
