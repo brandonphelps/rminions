@@ -122,12 +122,12 @@ pub enum Direction {
     West,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Command {
     /// used for moving to the next point.
     MoveP(Position),
     #[allow(dead_code)]
-    MoveD(Direction),
+    MoveD(Position),
 
     /// used for extracting resources from the provided position.
     Harvest(Entity),
@@ -341,7 +341,7 @@ impl GameState {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Memory {
     // current value of program counter
     // points to the "next" command to run, thus is updated after the command
@@ -528,11 +528,6 @@ fn movement_system(
     collisions: &mut ComponentManager<Collision>,
     new_pos: Position,
 ) {
-    // todo: check if new pos is within bounds?
-
-    
-    
-
     let mut is_colliding = false;
 
     // collision movement system.
@@ -564,6 +559,7 @@ fn movement_system(
 	// units can't move more than a distance of 1
 	if manhat_distance(pos.x, pos.y, new_pos.x, new_pos.y) > 1 {
 	    println!("Moving to far for this unit");
+	    println!("Manhat of {:#?} -> {:#?} = {}", pos, new_pos, manhat_distance(pos.x, pos.y, new_pos.x, new_pos.y));
 	    return;
 	}
 
@@ -673,9 +669,11 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
             Some(mut memory_comp) => {
                 // process memory.
                 println!("Process memory of unit: {}", e.0);
+		println!("{:#?}", memory_comp);
                 if memory_comp.commands.len() > 0 {
                     let current_command =
                         &memory_comp.commands[memory_comp.program_counter as usize];
+		    let mut move_pc = true;
                     match current_command {
                         Command::MoveP(position) => {
                             println!(
@@ -692,7 +690,37 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                             }
                         }
                         Command::MoveD(destination) => {
-                            println!("Moving: {:#?}", destination)
+                            println!("Moving: {:#?}", destination);
+			    let mut new_x = 0;
+			    let mut new_y = 0;
+
+			    {
+				let tmp_p = new_game_state.positions.get(&e).unwrap();
+				new_x = tmp_p.x;
+				new_y = tmp_p.y;
+				if tmp_p.x > destination.x {
+				    new_x = tmp_p.x - 1;
+				} else if tmp_p.x < destination.x {
+				    new_x = tmp_p.x + 1;
+				}
+				else { 
+				    if tmp_p.y > destination.y {
+					new_y = tmp_p.y - 1;
+				    } else if tmp_p.y < destination.y {
+					new_y = tmp_p.y + 1;
+				    }
+				}
+			    }
+			    let new_pos = Position::new(new_x, new_y);
+			    println!("Moving to new position: {:#?}", new_pos);
+			    movement_system(&e,
+					    &mut new_game_state.positions,
+					    &mut new_game_state.collision,
+					    new_pos.clone());
+
+			    if ! (new_pos.x == destination.x && new_pos.y == destination.y) {
+				move_pc = false;
+			    }
                         }
                         Command::Harvest(minable_entity) => {
                             if new_game_state.positions.get(&e).is_some() {
@@ -722,10 +750,12 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                         }
                     }
 
-                    memory_comp.program_counter += 1;
-                    if (memory_comp.program_counter as usize) >= memory_comp.commands.len() {
-                        memory_comp.program_counter = 0;
-                    }
+		    if move_pc { 
+			memory_comp.program_counter += 1;
+			if (memory_comp.program_counter as usize) >= memory_comp.commands.len() {
+                            memory_comp.program_counter = 0;
+			}
+		    }
                 }
             }
             None => (),
