@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 /// helper functions that aren't specific the app.
 
 // todo: how to make T only be valid for ints?
@@ -53,9 +55,11 @@ pub fn generate_path_step(start_pos: (f32, f32), end_pos: (f32, f32), delta: f32
             }
         }
         current_pos = (next_x, next_y);
-        r_path.path_points.push((current_pos.0 as u32, current_pos.1 as u32));
+        r_path
+            .path_points
+            .push((current_pos.0 as u32, current_pos.1 as u32));
     }
-    return r_path;    
+    return r_path;
 }
 
 /// naive direct path handling, no detection of things in the way in the slight est.
