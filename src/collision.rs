@@ -1,6 +1,6 @@
+#![allow(dead_code)]
 /// helper functions and objects for 2d collision detect.
 
-#[allow(dead_code)]
 struct Point {
     x: f64,
     y: f64,
@@ -13,7 +13,6 @@ pub struct Circle {
     pub radius: f64,
 }
 
-#[allow(dead_code)]
 struct Rectangle {
     // upper left
     p_ul: Point,
@@ -29,7 +28,6 @@ struct Rectangle {
 }
 
 // given three colinear points checks if point q lines on line segment pr
-#[allow(dead_code)]
 fn point_on_segement(p: &Point, q: &Point, r: &Point) -> bool {
     let max_x;
     let min_x;
@@ -59,7 +57,6 @@ fn point_on_segement(p: &Point, q: &Point, r: &Point) -> bool {
 }
 
 // todo update to be enum return
-#[allow(dead_code)]
 fn point_orientation(p: &Point, q: &Point, r: &Point) -> u8 {
     let val = ((q.y - p.y) * (r.x - q.x)) - ((q.x - p.x) * (r.y - q.y));
     if val > 0.0 {
@@ -73,7 +70,6 @@ fn point_orientation(p: &Point, q: &Point, r: &Point) -> u8 {
     }
 }
 
-#[allow(dead_code)]
 fn line_intersect(p_a1: &Point, p_a2: &Point, p_b1: &Point, p_b2: &Point) -> bool {
     let o1 = point_orientation(p_a1, p_a2, p_b1);
     let o2 = point_orientation(p_a1, p_a2, p_b2);

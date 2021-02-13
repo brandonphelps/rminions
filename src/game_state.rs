@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 
 // todo: remove unused imports.
@@ -38,7 +40,6 @@ pub struct Position {
 /// p / m
 /// 10 p / 1 m == 10 pixels foreach meeter thus |<--->| == 1 meter and 10 pixels
 pub fn world_to_display(pos: &Position, pixels_per_meter: u16) -> (i32, i32) {
-
     let tile_pos_x = pos.x as f32 + (pos.offset.x / 100.0);
     let tile_pos_y = pos.y as f32 + (pos.offset.y / 100.0);
     println!("tile pos: {}", tile_pos_x);
@@ -59,40 +60,41 @@ impl Position {
 
     /// @brief position, but without default
     pub fn new_with_offset(x: u32, y: u32, x_off: f32, y_off: f32) -> Self {
+        let mut p = Self::new(x, y);
+        let mut x_remainder_over = x_off;
+        let mut y_remainder_over = y_off;
 
-	let mut p = Self::new(x, y);
-	let mut x_remainder_over = x_off;
-	let mut y_remainder_over = y_off;
+        if x_off >= 100.0 {
+            let x_carry_over = x_off / 100.0;
 
-	if x_off >= 100.0 {
-	    let x_carry_over = x_off / 100.0;
+            p.x += x_carry_over as u32;
 
-	    p.x += x_carry_over as u32;
+            x_remainder_over = x_off % 100.0;
+        }
+        if y_off >= 100.0 {
+            let y_carry_over = y_off / 100.0;
+            p.y += y_carry_over as u32;
+            y_remainder_over = y_off % 100.0;
+        }
 
-	    x_remainder_over = x_off % 100.0;
-	}
-	if y_off >= 100.0 {
-	    let y_carry_over = y_off / 100.0;
-	    p.y += y_carry_over as u32;
-	    y_remainder_over = y_off % 100.0;
-	}
-
-        p.offset = PosOffset { x: x_remainder_over, y: y_remainder_over};
+        p.offset = PosOffset {
+            x: x_remainder_over,
+            y: y_remainder_over,
+        };
         return p;
     }
 
     pub fn add(&self, other: &Self) -> Self {
-	let x_off = other.offset.x + self.offset.x;
-	let y_off = other.offset.y + self.offset.y;
+        let x_off = other.offset.x + self.offset.x;
+        let y_off = other.offset.y + self.offset.y;
 
-	Position::new_with_offset(self.x + other.x,
-				  self.y + other.y,
-				  x_off, y_off)
+        Position::new_with_offset(self.x + other.x, self.y + other.y, x_off, y_off)
     }
 
-    // todo: add subtraction. 
-    pub fn sub(&self, other: Self) -> Self {
-	todo!();
+    // todo: add subtraction.
+    #[allow(dead_code)]
+    pub fn sub(&self, _other: Self) -> Self {
+        todo!();
     }
 }
 
@@ -315,7 +317,11 @@ impl GameState {
             res.push_str(&format!("Entity: {}\n", entity.0));
             match self.positions.get(&entity) {
                 Some(t) => {
-                    res.push_str(&format!("\t P: {}, {}\n", (t.x as f32 + t.offset.x), (t.y as f32 + t.offset.y)));
+                    res.push_str(&format!(
+                        "\t P: {}, {}\n",
+                        (t.x as f32 + t.offset.x),
+                        (t.y as f32 + t.offset.y)
+                    ));
                 }
                 None => {}
             };
@@ -530,21 +536,21 @@ fn movement_system(
 
     // collision movement system.
     for e_collision in collisions.entities.iter() {
-	// only do collision detection on non myself entities.
-	// todo: some rust iterator thing for this? 
-	if e_collision != entity {
+        // only do collision detection on non myself entities.
+        // todo: some rust iterator thing for this?
+        if e_collision != entity {
             match positions.get(&e_collision) {
-		Some(t) => {
-		    if t.x == new_pos.x && t.y == new_pos.y {
-			println!("A collision has occured at {}, {}", t.x, t.y);
-			is_colliding = true;
-			break;
-		    }
-		},
-		// this collision entity doesn't have a position.
-		None => (),
-	    }
-	}
+                Some(t) => {
+                    if t.x == new_pos.x && t.y == new_pos.y {
+                        println!("A collision has occured at {}, {}", t.x, t.y);
+                        is_colliding = true;
+                        break;
+                    }
+                }
+                // this collision entity doesn't have a position.
+                None => (),
+            }
+        }
     }
 
     if !is_colliding {
@@ -554,7 +560,10 @@ fn movement_system(
             .expect(&(format!("an entity didn't have a position? entity id: {}", entity.0)));
 
         *pos = new_pos;
-	println!("Setting pos: {} {} {} {}", pos.x, pos.y, pos.offset.x, pos.offset.y);
+        println!(
+            "Setting pos: {} {} {} {}",
+            pos.x, pos.y, pos.offset.x, pos.offset.y
+        );
     }
 }
 
@@ -578,7 +587,7 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
     // todo: entities to load commands must be near the hive.
     for input_command in game_input.user_commands.iter() {
         match input_command {
-            UserCommand::LoadProgram(entity_p, Prog) => {
+            UserCommand::LoadProgram(entity_p, prog) => {
                 println!("Loading full program into {}", entity_p.0);
                 match new_game_state.positions.get(&entity_p) {
                     Some(t) => {
@@ -591,7 +600,7 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                             match new_game_state.memory.get_mut(&entity_p) {
                                 Some(t) => {
                                     t.commands.clear();
-                                    let mut new_program = Prog.clone();
+                                    let mut new_program = prog.clone();
                                     t.commands.append(&mut new_program);
                                     // let new_program = Prog.clone();
                                     // t.commands.append(&mut (Prog.clone()));
@@ -603,7 +612,7 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                     None => (),
                 }
             }
-            UserCommand::LoadCommand(entity_c, C) => {
+            UserCommand::LoadCommand(entity_c, command) => {
                 match new_game_state.positions.get(&entity_c) {
                     Some(t) => {
                         // 0, 0 is hive position
@@ -614,7 +623,7 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                         } else {
                             match new_game_state.memory.get_mut(&entity_c) {
                                 Some(t) => {
-                                    t.commands.push(C.clone());
+                                    t.commands.push(command.clone());
                                 }
                                 None => (),
                             }
@@ -660,35 +669,38 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                     let current_command =
                         &memory_comp.commands[memory_comp.program_counter as usize];
                     match current_command {
-                        Command::MoveP(P) => {
-                            println!("Moving: {}, {}, {}, {}", P.x, P.y, P.offset.x, P.offset.y);
+                        Command::MoveP(position) => {
+                            println!(
+                                "Moving: {}, {}, {}, {}",
+                                position.x, position.y, position.offset.x, position.offset.y
+                            );
                             if new_game_state.positions.get(&e).is_some() {
                                 movement_system(
                                     &e,
                                     &mut new_game_state.positions,
                                     &mut new_game_state.collision,
-                                    P.clone(),
+                                    position.clone(),
                                 );
                             }
                         }
-                        Command::MoveD(D) => {
-                            println!("Moving: {:#?}", D)
+                        Command::MoveD(destination) => {
+                            println!("Moving: {:#?}", destination)
                         }
-                        Command::Harvest(E) => {
+                        Command::Harvest(minable_entity) => {
                             if new_game_state.positions.get(&e).is_some() {
                                 harvest_system(
                                     &e,
                                     &mut new_game_state.positions,
                                     &mut new_game_state.solid_containers,
-                                    &E,
+                                    &minable_entity,
                                     "iron",
                                 );
                             }
                         }
-                        Command::Deposit(E) => {
-                            if new_game_state.positions.get(&E).is_some() {
+                        Command::Deposit(mineable_entity) => {
+                            if new_game_state.positions.get(&mineable_entity).is_some() {
                                 harvest_system(
-                                    &E,
+                                    &mineable_entity,
                                     &mut new_game_state.positions,
                                     &mut new_game_state.solid_containers,
                                     &e,
@@ -721,7 +733,7 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
     canvas.set_draw_color(Color::RGB(0, 255, 0));
 
     // draw grid.
-    // display aspect. 
+    // display aspect.
     let pixels_per_meter: u16 = 30;
 
     // todo: game state should have a world bounds.
@@ -729,16 +741,17 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
         for y_pos in 0..20 {
             // fill rect operates in visible pixel space.
             // todo: have function for translate between pixel space -> world space and vise versa.
-	    let vis_tile_pos = world_to_display(&Position::new(x_pos, y_pos), pixels_per_meter);
-	    // let tile_width = Position::new(tile_width_meters, tile_width_meters);
-	    // let tile_draw = world_to_display(&tile_pos, pixels_per_meter);
-	    // let tile_draw_w = world_to_display(&tile_width, pixels_per_meter);
+            let vis_tile_pos = world_to_display(&Position::new(x_pos, y_pos), pixels_per_meter);
+            // let tile_width = Position::new(tile_width_meters, tile_width_meters);
+            // let tile_draw = world_to_display(&tile_pos, pixels_per_meter);
+            // let tile_draw_w = world_to_display(&tile_width, pixels_per_meter);
 
-            let _p = canvas.fill_rect(Rect::new(vis_tile_pos.0,
-						vis_tile_pos.1,
+            let _p = canvas.fill_rect(Rect::new(
+                vis_tile_pos.0,
+                vis_tile_pos.1,
                 // allows for a margin to be created if less than pixel_tile_width /
-						(pixels_per_meter - 5) as u32,
-						(pixels_per_meter - 5) as u32,
+                (pixels_per_meter - 5) as u32,
+                (pixels_per_meter - 5) as u32,
             ));
         }
     }
@@ -750,14 +763,9 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
         match game_state.positions.get(&entity) {
             Some(pos) => {
                 // where to draw.
-		let vis_pos = world_to_display(pos, pixels_per_meter);
-		
-                let _p = canvas.fill_rect(Rect::new(
-                    vis_pos.0 as i32,
-                    vis_pos.1 as i32,
-                    10,
-                    10,
-                ));
+                let vis_pos = world_to_display(pos, pixels_per_meter);
+
+                let _p = canvas.fill_rect(Rect::new(vis_pos.0 as i32, vis_pos.1 as i32, 10, 10));
                 // how to determine what to draw?
             }
             None => (),
@@ -920,38 +928,57 @@ mod tests {
     // todo: parameterisze testing
     #[test]
     fn test_world_to_display() {
-	let meter_to_pixels = 2;
-	// assert_eq!(world_to_display(&Position::new(0, 0), meter_to_pixels, 16, 16), (0, 0));
-	// assert_eq!(world_to_display(&Position::new(1, 0), meter_to_pixels, 16, 16), (32, 0));
-	// assert_eq!(world_to_display(&Position::new(2, 0), meter_to_pixels, 16, 16), (64, 0));
-	// assert_eq!(world_to_display(&Position::new(2, 1), meter_to_pixels, 16, 16), (64, 32));
-	// assert_eq!(world_to_display(&Position::new_with_offset(2, 1, 10.0, 0.0),
-	// 			    meter_to_pixels, 16, 16), (67, 32));
+        let meter_to_pixels = 2;
+        // assert_eq!(world_to_display(&Position::new(0, 0), meter_to_pixels, 16, 16), (0, 0));
+        // assert_eq!(world_to_display(&Position::new(1, 0), meter_to_pixels, 16, 16), (32, 0));
+        // assert_eq!(world_to_display(&Position::new(2, 0), meter_to_pixels, 16, 16), (64, 0));
+        // assert_eq!(world_to_display(&Position::new(2, 1), meter_to_pixels, 16, 16), (64, 32));
+        // assert_eq!(world_to_display(&Position::new_with_offset(2, 1, 10.0, 0.0),
+        // 			    meter_to_pixels, 16, 16), (67, 32));
     }
-
 
     #[test]
     fn test_position_stuff() {
-	let p1 = Position::new(30, 2);
-	assert_eq!(p1, Position { x: 30, y: 2, offset: PosOffset { x: 0.0, y: 0.0 }});
+        let p1 = Position::new(30, 2);
+        assert_eq!(
+            p1,
+            Position {
+                x: 30,
+                y: 2,
+                offset: PosOffset { x: 0.0, y: 0.0 }
+            }
+        );
 
-	let p2 = Position::new_with_offset(30, 2, 10.0, 2.0);
-	assert_eq!(p2, Position { x: 30, y: 2, offset: PosOffset { x: 10.0, y: 2.0 }});
+        let p2 = Position::new_with_offset(30, 2, 10.0, 2.0);
+        assert_eq!(
+            p2,
+            Position {
+                x: 30,
+                y: 2,
+                offset: PosOffset { x: 10.0, y: 2.0 }
+            }
+        );
 
-	let p3 = Position::new_with_offset(30, 2, 200.0, 2.0);
-	assert_eq!(p3, Position { x: 32, y: 2, offset: PosOffset { x: 0.0, y: 2.0 }});
+        let p3 = Position::new_with_offset(30, 2, 200.0, 2.0);
+        assert_eq!(
+            p3,
+            Position {
+                x: 32,
+                y: 2,
+                offset: PosOffset { x: 0.0, y: 2.0 }
+            }
+        );
 
-	let p4 = p2.add(&p3);
-	assert_eq!(p4.x, 62);
-	assert_eq!(p4.y, 4);
+        let p4 = p2.add(&p3);
+        assert_eq!(p4.x, 62);
+        assert_eq!(p4.y, 4);
 
-	assert_eq!(p2.add(&p3), p3.add(&p2));
+        assert_eq!(p2.add(&p3), p3.add(&p2));
 
-	let p5 = p2.add(&Position::new_with_offset(30, 2, 90.0, 99.0));
-	assert_eq!(p5.x, 61);
-	// 2 + 2 + 1
-	assert_eq!(p5.y, 5);
-	assert_eq!(p5.offset.x, 0.0);
-
+        let p5 = p2.add(&Position::new_with_offset(30, 2, 90.0, 99.0));
+        assert_eq!(p5.x, 61);
+        // 2 + 2 + 1
+        assert_eq!(p5.y, 5);
+        assert_eq!(p5.offset.x, 0.0);
     }
 }
