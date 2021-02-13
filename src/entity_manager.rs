@@ -27,6 +27,7 @@ impl EntityManager {
     }
 
     // returns total number of current available entities.
+    #[allow(dead_code)]
     pub fn count(&self) -> usize {
         return self.entities.len();
     }

@@ -17,26 +17,16 @@ use utils::{generate_path, Path};
 
 // todo: create gui implementation if a user wanted to play the game themselves.
 
-fn pos(vec: f64, t: f64, x: f64) -> f64 {
-    return vec * t + x;
-}
-
-fn Pos(vec: f32, t: f32, x: &Position) -> Position {
-    let delta: f32 = vec * t;
-    println!("Delta: {}", delta);
-    let p = Position::new_with_offset(0, 0, delta, 0.0);
-    return x.add(&p);
-}
 
 fn generate_pathing_program(path: &Path) -> Vec<Command> {
     let mut program = Vec::<Command>::new();
 
-    let pos_offset_dist: f32 = 1.0;
-    let speed = 0.5; // meters per second
-    let tile_width = 16;
+    let _pos_offset_dist: f32 = 1.0;
+    let _speed = 0.5; // meters per second
+    let _tile_width = 16;
 
     for p in path.path_points.iter() {
-	let mut current_pos = Position::new(p.0, p.1);
+	let current_pos = Position::new(p.0, p.1);
         program.push(Command::MoveP(current_pos));
     }
 
@@ -150,14 +140,26 @@ fn main() -> () {
     }
 }
 
-fn pos_to_Pos(p: f32) -> Position {
 
-    return Position::new(0, 0);
+// todo: move this to another file. or delete when done. 
+
+fn pos(vec: f64, t: f64, x: f64) -> f64 {
+    return vec * t + x;
 }
+
+fn Pos(vec: f32, t: f32, x: &Position) -> Position {
+    let delta: f32 = vec * t;
+    println!("Delta: {}", delta);
+    let p = Position::new_with_offset(0, 0, delta, 0.0);
+    return x.add(&p);
+}
+
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_positional() {
@@ -178,14 +180,13 @@ mod tests {
 }
 
 
-
 fn test_main() -> () {
     let mut current_pos: f64 = 0.0 ;
     let mut currentPos = Position::new(0, 0);
     let speed = 1.0; // meters per second
     
     for time_point in 0..100 {
-	let seconds_past = (time_point as f64);
+	let seconds_past = time_point as f64;
 	let dt = 1.0; // in seconds
 	println!("Time point: {} seconds", seconds_past);
 	println!("Current Pos: {:#?}", currentPos);

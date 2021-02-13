@@ -6,6 +6,7 @@ build_job:
   script:
     - ls
     - echo "starting job..."
+    - echo $PATH
     - cargo build
     - echo job finished
   only:

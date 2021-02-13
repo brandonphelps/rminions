@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 
 // todo: remove unused imports.
@@ -91,7 +93,8 @@ impl Position {
     }
 
     // todo: add subtraction. 
-    pub fn sub(&self, other: Self) -> Self {
+    #[allow(dead_code)]
+    pub fn sub(&self, _other: Self) -> Self {
 	todo!();
     }
 }
