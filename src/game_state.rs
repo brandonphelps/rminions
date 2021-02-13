@@ -42,8 +42,6 @@ pub struct Position {
 pub fn world_to_display(pos: &Position, pixels_per_meter: u16) -> (i32, i32) {
     let tile_pos_x = pos.x as f32 + (pos.offset.x / 100.0);
     let tile_pos_y = pos.y as f32 + (pos.offset.y / 100.0);
-    println!("tile pos: {}", tile_pos_x);
-
     let x_pos: i32 = (tile_pos_x * pixels_per_meter as f32) as i32;
     let y_pos: i32 = (tile_pos_y * pixels_per_meter as f32) as i32;
     return (x_pos, y_pos);
@@ -532,6 +530,9 @@ fn movement_system(
 ) {
     // todo: check if new pos is within bounds?
 
+    
+    
+
     let mut is_colliding = false;
 
     // collision movement system.
@@ -554,10 +555,17 @@ fn movement_system(
     }
 
     if !is_colliding {
+
         // its okay to move to new_pos.
-        let pos = positions
+	let pos = positions
             .get_mut(&entity)
             .expect(&(format!("an entity didn't have a position? entity id: {}", entity.0)));
+
+	// units can't move more than a distance of 1
+	if manhat_distance(pos.x, pos.y, new_pos.x, new_pos.y) > 1 {
+	    println!("Moving to far for this unit");
+	    return;
+	}
 
         *pos = new_pos;
         println!(
