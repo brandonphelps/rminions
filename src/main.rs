@@ -99,9 +99,9 @@ fn main() -> () {
 
 		if e.0 == newly_spawned_entity_id {
 		    let mut prog = Vec::new();
-		    prog.push(Command::MoveD(Position::new(iron_pos.0, iron_pos.1-1)));
+		    prog.push(Command::MoveD(Position::new(iron_pos.0, iron_pos.1)));
                     prog.push(Command::Harvest(Entity(2)));
-		    prog.push(Command::MoveD(Position::new(1, 1)));
+		    prog.push(Command::MoveD(Position::new(0, 0)));
                     // entity 1 is hive.
                     prog.push(Command::Deposit(Entity(1)));
                     game_input

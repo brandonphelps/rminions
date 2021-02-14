@@ -743,16 +743,22 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
 				
 				let x_dist = uclid_distance(tmp_p.x as f32 * 100.0 + tmp_p.offset.x, 0.0,
 							    destination.x as f32 * 100.0 + destination.offset.x, 0.0);
-				if tmp_p.x > destination.x && x_dist > 5.0 {
+				let y_dist = uclid_distance(0.0,
+							    tmp_p.y as f32 * 100.0 + tmp_p.offset.y,
+							    0.0,
+							    destination.y as f32 * 100.0 + destination.offset.y);
+
+				if tmp_p.x >= destination.x && x_dist > 5.0 {
 				    new_offset_x -= speed * dt;
-				} else if tmp_p.x < destination.x  && x_dist > 5.0 {
+				} else if tmp_p.x <= destination.x  && x_dist > 5.0 {
 				    new_offset_x += speed * dt;
-				}
-				else { 
-				    if tmp_p.y > destination.y {
+				} else { 
+				    if tmp_p.y >= destination.y && y_dist > 5.0 {
 					new_offset_y -= speed * dt;
-				    } else if tmp_p.y < destination.y {
+				    } else if tmp_p.y <= destination.y && y_dist > 5.0 {
 					new_offset_y += speed * dt;
+				    } else {
+					println!("No need to calculate new position");
 				    }
 				}
 			    }
@@ -765,7 +771,7 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
 					    &mut new_game_state.collision,
 					    new_pos.clone());
 
-			    if new_pos.distance(&destination) > 50.0 {
+			    if new_pos.distance(&destination) > 5.0 {
 				move_pc = false;
 			    }
                         }
