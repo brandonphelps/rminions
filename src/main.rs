@@ -15,7 +15,7 @@ use sdl2::keyboard::Keycode;
 
 use entity_manager::Entity;
 use game_state::{Command, Position, UserCommand};
-use utils::{Path};
+use utils::Path;
 
 // todo: create gui implementation if a user wanted to play the game themselves.
 
@@ -34,7 +34,6 @@ fn generate_pathing_program(path: &Path) -> Vec<Command> {
 
     return program;
 }
-
 
 fn main() -> () {
     println!("Hello World: Asteroids is not currently providing a gui layer :(");
@@ -74,7 +73,7 @@ fn main() -> () {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => {
-		    break 'running;
+                    break 'running;
                 }
                 _ => {}
             };
@@ -94,32 +93,30 @@ fn main() -> () {
         // }
 
         // should be like get programable units.
-	if ! informed_the_unit { 
+        if !informed_the_unit {
             for e in current_state.get_units() {
-
-		if e.0 == newly_spawned_entity_id {
-		    let mut prog = Vec::new();
-		    prog.push(Command::MoveD(Position::new(iron_pos.0, iron_pos.1)));
+                if e.0 == newly_spawned_entity_id {
+                    let mut prog = Vec::new();
+                    prog.push(Command::MoveD(Position::new(iron_pos.0, iron_pos.1)));
                     prog.push(Command::Harvest(Entity(2)));
-		    prog.push(Command::MoveD(Position::new(0, 0)));
+                    prog.push(Command::MoveD(Position::new(0, 0)));
                     // entity 1 is hive.
                     prog.push(Command::Deposit(Entity(1)));
                     game_input
-			.user_commands
-			.push(UserCommand::LoadProgram(*e, prog));
-		    informed_the_unit = true;
-		}
+                        .user_commands
+                        .push(UserCommand::LoadProgram(*e, prog));
+                    informed_the_unit = true;
+                }
             }
-	}
+        }
         current_state = game_state::game_update(current_state, 0.1, &game_input);
 
         game_state::game_sdl2_render(&current_state, &mut canvas);
 
-	// how expensive is this? 
+        // how expensive is this?
         canvas.present();
 
-
-	// todo: get a consistant sleep time aiming for 60 fps. (also recalcualte to be seconds per frame calc).
+        // todo: get a consistant sleep time aiming for 60 fps. (also recalcualte to be seconds per frame calc).
         let ten_millis = time::Duration::from_millis(10);
 
         thread::sleep(ten_millis);

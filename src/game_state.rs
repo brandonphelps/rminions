@@ -11,7 +11,7 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
-use crate::utils::{uclid_distance};
+use crate::utils::uclid_distance;
 
 use crate::collision::Circle;
 use crate::entity_manager::{Entity, EntityManager};
@@ -60,12 +60,12 @@ impl Position {
     }
 
     pub fn distance(&self, other: &Self) -> f32 {
-	let p_x1 = self.x as f32 * 100.0 + self.offset.x;
-	let p_y1 = self.y as f32 * 100.0 + self.offset.y;
-	let p_x2 = other.x as f32 * 100.0 + other.offset.x;
-	let p_y2 = other.y as f32 * 100.0 + other.offset.y;
+        let p_x1 = self.x as f32 * 100.0 + self.offset.x;
+        let p_y1 = self.y as f32 * 100.0 + self.offset.y;
+        let p_x2 = other.x as f32 * 100.0 + other.offset.x;
+        let p_y2 = other.y as f32 * 100.0 + other.offset.y;
 
-	return uclid_distance(p_x1, p_y1, p_x2, p_y2);
+        return uclid_distance(p_x1, p_y1, p_x2, p_y2);
     }
 
     /// @brief position, but without default
@@ -77,53 +77,52 @@ impl Position {
             p.x += x_carry_over as u32;
             p.offset.x = x_off % 100.0;
         } else if x_off < 0.0 {
-	    // subtraction
+            // subtraction
 
-	    let tmp_x_off = x_off.abs();
+            let tmp_x_off = x_off.abs();
 
-	    if p.offset.x < tmp_x_off {
-		if p.x < (tmp_x_off / 100.0) as u32 {
-		    panic!("Can't carry as {} < {} ", p.x, tmp_x_off);
-		}
-		// todo: how to get rid of this whileloop?
-		while p.offset.x < tmp_x_off {
-		    p.offset.x += 100.0;
-		    p.x -= 1;
-		}
-		p.offset.x -= tmp_x_off;
-	    }
-	} else {
-	    p.offset.x = x_off;
-	}
+            if p.offset.x < tmp_x_off {
+                if p.x < (tmp_x_off / 100.0) as u32 {
+                    panic!("Can't carry as {} < {} ", p.x, tmp_x_off);
+                }
+                // todo: how to get rid of this whileloop?
+                while p.offset.x < tmp_x_off {
+                    p.offset.x += 100.0;
+                    p.x -= 1;
+                }
+                p.offset.x -= tmp_x_off;
+            }
+        } else {
+            p.offset.x = x_off;
+        }
 
         if y_off >= 100.0 {
             let y_carry_over = y_off / 100.0;
             p.y += y_carry_over as u32;
         } else if y_off < 0.0 {
-	    // subtraction
+            // subtraction
 
-	    let tmp_y_off = y_off.abs();
+            let tmp_y_off = y_off.abs();
 
-	    if p.offset.y < tmp_y_off {
-		if p.y < (tmp_y_off / 100.0) as u32 {
-		    panic!("Can't carry as {} < {} ", p.y, tmp_y_off);
-		}
-		// todo: how to get rid of this whileloop?
-		while p.offset.y < tmp_y_off {
-		    p.offset.y += 100.0;
-		    p.y -= 1;
-		}
-		p.offset.y -= tmp_y_off;
-	    }
-	}
-	else {
-	    p.offset.y = y_off;
-	}
+            if p.offset.y < tmp_y_off {
+                if p.y < (tmp_y_off / 100.0) as u32 {
+                    panic!("Can't carry as {} < {} ", p.y, tmp_y_off);
+                }
+                // todo: how to get rid of this whileloop?
+                while p.offset.y < tmp_y_off {
+                    p.offset.y += 100.0;
+                    p.y -= 1;
+                }
+                p.offset.y -= tmp_y_off;
+            }
+        } else {
+            p.offset.y = y_off;
+        }
         return p;
     }
 
     pub fn add(&self, other: &Self) -> Self {
-	println!("Add");
+        println!("Add");
         let x_off = other.offset.x + self.offset.x;
         let y_off = other.offset.y + self.offset.y;
 
@@ -550,7 +549,6 @@ fn harvest_system(
 
     // // ensure entity_container isn't full.
     // // if entity_container.
-
 }
 
 // not all items that have positions are moveable, should there exist moveable componetns?
@@ -570,7 +568,7 @@ fn movement_system(
         if e_collision != entity {
             match positions.get(&e_collision) {
                 Some(t) => {
-		    // need bounding box collision rather than point collision.
+                    // need bounding box collision rather than point collision.
                     if t.x == new_pos.x && t.y == new_pos.y {
                         println!("A collision has occured at {}, {}", t.x, t.y);
                         is_colliding = true;
@@ -584,21 +582,25 @@ fn movement_system(
     }
 
     if !is_colliding {
-
         // its okay to move to new_pos.
-	let pos = positions
+        let pos = positions
             .get_mut(&entity)
             .expect(&(format!("an entity didn't have a position? entity id: {}", entity.0)));
 
-	// units can't move more than a distance of 1
-	// todo: what happens if the dt becomes super large?
-	// if this occurs then this distance restriction could be hit and the unit won't move as far
-	// however there are a lot of other issues like collision detection and such. 
-	if pos.distance(&new_pos) > 100.0 {
-	    println!("Moving to far for this unit");
-	    println!("Manhat of {:#?} -> {:#?} = {}", pos, new_pos, manhat_distance(pos.x, pos.y, new_pos.x, new_pos.y));
-	    return;
-	}
+        // units can't move more than a distance of 1
+        // todo: what happens if the dt becomes super large?
+        // if this occurs then this distance restriction could be hit and the unit won't move as far
+        // however there are a lot of other issues like collision detection and such.
+        if pos.distance(&new_pos) > 100.0 {
+            println!("Moving to far for this unit");
+            println!(
+                "Manhat of {:#?} -> {:#?} = {}",
+                pos,
+                new_pos,
+                manhat_distance(pos.x, pos.y, new_pos.x, new_pos.y)
+            );
+            return;
+        }
 
         *pos = new_pos;
         println!(
@@ -706,11 +708,11 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
             Some(mut memory_comp) => {
                 // process memory.
                 println!("Process memory of unit: {}", e.0);
-		println!("{:#?}", memory_comp);
+                println!("{:#?}", memory_comp);
                 if memory_comp.commands.len() > 0 {
                     let current_command =
                         &memory_comp.commands[memory_comp.program_counter as usize];
-		    let mut move_pc = true;
+                    let mut move_pc = true;
                     match current_command {
                         Command::MoveP(position) => {
                             println!(
@@ -728,52 +730,60 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
                         }
                         Command::MoveD(destination) => {
                             // println!("Moving: {:#?}", destination);
-			    let new_x;
-			    let new_y;
-			    let mut new_offset_x;
-			    let mut new_offset_y;
-			    {
-				let tmp_p = new_game_state.positions.get(&e).unwrap();
-				// current position
-				// println!("Current position: {:#?}", tmp_p);
-				let speed = 100.0; // meter per second
-				new_x = tmp_p.x;
-				new_y = tmp_p.y;
-				new_offset_x = tmp_p.offset.x;
-				new_offset_y = tmp_p.offset.y;
+                            let new_x;
+                            let new_y;
+                            let mut new_offset_x;
+                            let mut new_offset_y;
+                            {
+                                let tmp_p = new_game_state.positions.get(&e).unwrap();
+                                // current position
+                                // println!("Current position: {:#?}", tmp_p);
+                                let speed = 100.0; // meter per second
+                                new_x = tmp_p.x;
+                                new_y = tmp_p.y;
+                                new_offset_x = tmp_p.offset.x;
+                                new_offset_y = tmp_p.offset.y;
 
-				// 1 is the speed 1 meter per second.
-				
-				let x_dist = uclid_distance(tmp_p.x as f32 * 100.0 + tmp_p.offset.x, 0.0,
-							    destination.x as f32 * 100.0 + destination.offset.x, 0.0);
-				let y_dist = uclid_distance(0.0,
-							    tmp_p.y as f32 * 100.0 + tmp_p.offset.y,
-							    0.0,
-							    destination.y as f32 * 100.0 + destination.offset.y);
+                                // 1 is the speed 1 meter per second.
 
-				if tmp_p.x >= destination.x && x_dist > 5.0 {
-				    new_offset_x -= speed * dt;
-				} else if tmp_p.x <= destination.x  && x_dist > 5.0 {
-				    new_offset_x += speed * dt;
-				}
-				if tmp_p.y >= destination.y && y_dist > 5.0 {
-				    new_offset_y -= speed * dt;
-				} else if tmp_p.y <= destination.y && y_dist > 5.0 {
-				    new_offset_y += speed * dt;
-				}
-			    }
+                                let x_dist = uclid_distance(
+                                    tmp_p.x as f32 * 100.0 + tmp_p.offset.x,
+                                    0.0,
+                                    destination.x as f32 * 100.0 + destination.offset.x,
+                                    0.0,
+                                );
+                                let y_dist = uclid_distance(
+                                    0.0,
+                                    tmp_p.y as f32 * 100.0 + tmp_p.offset.y,
+                                    0.0,
+                                    destination.y as f32 * 100.0 + destination.offset.y,
+                                );
 
-			    let new_pos = Position::new_with_offset(new_x, new_y,
-								    new_offset_x, new_offset_y);
-			    // println!("Moving to new position: {:#?}", new_pos);
-			    movement_system(&e,
-					    &mut new_game_state.positions,
-					    &mut new_game_state.collision,
-					    new_pos.clone());
+                                if tmp_p.x >= destination.x && x_dist > 5.0 {
+                                    new_offset_x -= speed * dt;
+                                } else if tmp_p.x <= destination.x && x_dist > 5.0 {
+                                    new_offset_x += speed * dt;
+                                }
+                                if tmp_p.y >= destination.y && y_dist > 5.0 {
+                                    new_offset_y -= speed * dt;
+                                } else if tmp_p.y <= destination.y && y_dist > 5.0 {
+                                    new_offset_y += speed * dt;
+                                }
+                            }
 
-			    if new_pos.distance(&destination) > 5.0 {
-				move_pc = false;
-			    }
+                            let new_pos =
+                                Position::new_with_offset(new_x, new_y, new_offset_x, new_offset_y);
+                            // println!("Moving to new position: {:#?}", new_pos);
+                            movement_system(
+                                &e,
+                                &mut new_game_state.positions,
+                                &mut new_game_state.collision,
+                                new_pos.clone(),
+                            );
+
+                            if new_pos.distance(&destination) > 5.0 {
+                                move_pc = false;
+                            }
                         }
                         Command::Harvest(minable_entity) => {
                             if new_game_state.positions.get(&e).is_some() {
@@ -803,12 +813,12 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
                         }
                     }
 
-		    if move_pc { 
-			memory_comp.program_counter += 1;
-			if (memory_comp.program_counter as usize) >= memory_comp.commands.len() {
+                    if move_pc {
+                        memory_comp.program_counter += 1;
+                        if (memory_comp.program_counter as usize) >= memory_comp.commands.len() {
                             memory_comp.program_counter = 0;
-			}
-		    }
+                        }
+                    }
                 }
             }
             None => (),
@@ -832,8 +842,7 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
         for y_pos in 0..20 {
             // fill rect operates in visible pixel space.
             // todo: have function for translate between pixel space -> world space and vise versa.
-            let vis_tile_pos = world_to_display(&Position::new(x_pos, y_pos),
-						pixels_per_meter);
+            let vis_tile_pos = world_to_display(&Position::new(x_pos, y_pos), pixels_per_meter);
             // let tile_width = Position::new(tile_width_meters, tile_width_meters);
             // let tile_draw = world_to_display(&tile_pos, pixels_per_meter);
             // let tile_draw_w = world_to_display(&tile_width, pixels_per_meter);
@@ -1076,52 +1085,67 @@ mod tests {
 
     #[test]
     fn test_position_offsets_base() {
-	let p1 = Position::new_with_offset(1, 1, 0.0, 0.0);
-	let p2 = Position { x: 1, y: 1, offset : PosOffset { x: 0.0, y: 0.0 }};
-	assert_eq!(p1, p2);
+        let p1 = Position::new_with_offset(1, 1, 0.0, 0.0);
+        let p2 = Position {
+            x: 1,
+            y: 1,
+            offset: PosOffset { x: 0.0, y: 0.0 },
+        };
+        assert_eq!(p1, p2);
     }
 
     #[test]
     fn test_position_offsets_negative_value() {
-    	let p1 = Position::new_with_offset(1, 1, 0.0, 0.0);
-	let p3 = Position::new_with_offset(2, 1, -100.0, 0.0);
-	assert_eq!(p1, p3);
+        let p1 = Position::new_with_offset(1, 1, 0.0, 0.0);
+        let p3 = Position::new_with_offset(2, 1, -100.0, 0.0);
+        assert_eq!(p1, p3);
 
-	let p4 = Position::new_with_offset(1, 40, 0.0, -3900.0);
+        let p4 = Position::new_with_offset(1, 40, 0.0, -3900.0);
 
-	assert_eq!(p1, p4);
+        assert_eq!(p1, p4);
     }
     #[test]
     fn test_position_always_store_positives() {
-
-	let p5 = Position::new_with_offset(1, 1, -20.0, 0.0);
-	assert_eq!(p5, Position {x : 0, y: 1, offset: PosOffset { x: 80.0, y: 0.0 }});
+        let p5 = Position::new_with_offset(1, 1, -20.0, 0.0);
+        assert_eq!(
+            p5,
+            Position {
+                x: 0,
+                y: 1,
+                offset: PosOffset { x: 80.0, y: 0.0 }
+            }
+        );
     }
     #[test]
     fn test_position_with_remainder() {
-	let p5 = Position::new_with_offset(1, 2, 30.0, 20.0);
-	let p6 = Position::new_with_offset(1, 0, -32.0, 200.0);
+        let p5 = Position::new_with_offset(1, 2, 30.0, 20.0);
+        let p6 = Position::new_with_offset(1, 0, -32.0, 200.0);
 
-	assert_eq!(p6, Position {x : 0, y: 2, offset: PosOffset { x: 68.0, y: 0.0 }});
-	
-	let p5_p6 = Position::new_with_offset(1, 4, 98.0, 20.0);
+        assert_eq!(
+            p6,
+            Position {
+                x: 0,
+                y: 2,
+                offset: PosOffset { x: 68.0, y: 0.0 }
+            }
+        );
 
-	assert_eq!(p5.add(&p6), p5_p6);
+        let p5_p6 = Position::new_with_offset(1, 4, 98.0, 20.0);
 
+        assert_eq!(p5.add(&p6), p5_p6);
     }
 
     #[test]
     fn test_position_distance() {
-	let p1 = Position::new(1, 2);
-	let p2 = Position::new(1, 2);
+        let p1 = Position::new(1, 2);
+        let p2 = Position::new(1, 2);
 
-	assert_eq!(p1.distance(&p2), 0.0);
+        assert_eq!(p1.distance(&p2), 0.0);
 
-	let p3 = Position::new(2, 2);
-	assert_eq!(p1.distance(&p3), 100.0);
+        let p3 = Position::new(2, 2);
+        assert_eq!(p1.distance(&p3), 100.0);
 
-	let p4 = Position::new_with_offset(1, 2, 50.0, 0.0);
-	assert_eq!(p1.distance(&p4), 50.0);
-
+        let p4 = Position::new_with_offset(1, 2, 50.0, 0.0);
+        assert_eq!(p1.distance(&p4), 50.0);
     }
 }
