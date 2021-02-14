@@ -591,7 +591,10 @@ fn movement_system(
             .expect(&(format!("an entity didn't have a position? entity id: {}", entity.0)));
 
 	// units can't move more than a distance of 1
-	if manhat_distance(pos.x, pos.y, new_pos.x, new_pos.y) > 1 {
+	// todo: what happens if the dt becomes super large?
+	// if this occurs then this distance restriction could be hit and the unit won't move as far
+	// however there are a lot of other issues like collision detection and such. 
+	if pos.distance(&new_pos) > 100.0 {
 	    println!("Moving to far for this unit");
 	    println!("Manhat of {:#?} -> {:#?} = {}", pos, new_pos, manhat_distance(pos.x, pos.y, new_pos.x, new_pos.y));
 	    return;
@@ -724,7 +727,7 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
                             }
                         }
                         Command::MoveD(destination) => {
-                            println!("Moving: {:#?}", destination);
+                            // println!("Moving: {:#?}", destination);
 			    let new_x;
 			    let new_y;
 			    let mut new_offset_x;
@@ -732,7 +735,7 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
 			    {
 				let tmp_p = new_game_state.positions.get(&e).unwrap();
 				// current position
-				println!("Current position: {:#?}", tmp_p);
+				// println!("Current position: {:#?}", tmp_p);
 				let speed = 100.0; // meter per second
 				new_x = tmp_p.x;
 				new_y = tmp_p.y;
@@ -752,20 +755,17 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
 				    new_offset_x -= speed * dt;
 				} else if tmp_p.x <= destination.x  && x_dist > 5.0 {
 				    new_offset_x += speed * dt;
-				} else { 
-				    if tmp_p.y >= destination.y && y_dist > 5.0 {
-					new_offset_y -= speed * dt;
-				    } else if tmp_p.y <= destination.y && y_dist > 5.0 {
-					new_offset_y += speed * dt;
-				    } else {
-					println!("No need to calculate new position");
-				    }
+				}
+				if tmp_p.y >= destination.y && y_dist > 5.0 {
+				    new_offset_y -= speed * dt;
+				} else if tmp_p.y <= destination.y && y_dist > 5.0 {
+				    new_offset_y += speed * dt;
 				}
 			    }
 
 			    let new_pos = Position::new_with_offset(new_x, new_y,
 								    new_offset_x, new_offset_y);
-			    println!("Moving to new position: {:#?}", new_pos);
+			    // println!("Moving to new position: {:#?}", new_pos);
 			    movement_system(&e,
 					    &mut new_game_state.positions,
 					    &mut new_game_state.collision,
