@@ -59,10 +59,7 @@ impl Position {
 
     /// @brief position, but without default
     pub fn new_with_offset(x: u32, y: u32, x_off: f32, y_off: f32) -> Self {
-	println!("New with offset");
         let mut p = Self::new(x, y);
-        let mut x_remainder_over = x_off;
-        let mut y_remainder_over = y_off;
 
         if x_off >= 100.0 {
             let x_carry_over = x_off / 100.0;
@@ -74,12 +71,10 @@ impl Position {
 	    let tmp_x_off = x_off.abs();
 
 	    if p.offset.x < tmp_x_off {
-		let mut amount_to_carry = 0;
-		//= 1 + (tmp_x_off / 100.0) as u32;
-		// todo: how to get rid of this whileloop?
 		if p.x < (tmp_x_off / 100.0) as u32 {
 		    panic!("Can't carry as {} < {} ", p.x, tmp_x_off);
 		}
+		// todo: how to get rid of this whileloop?
 		while p.offset.x < tmp_x_off {
 		    p.offset.x += 100.0;
 		    p.x -= 1;
@@ -90,32 +85,19 @@ impl Position {
 	    p.offset.x = x_off;
 	}
 
-
-
-	///
-	//  30
-	// -19
-	// ----
-	//  11
-
-	// 
-
         if y_off >= 100.0 {
             let y_carry_over = y_off / 100.0;
             p.y += y_carry_over as u32;
-            y_remainder_over = y_off % 100.0;
         } else if y_off < 0.0 {
 	    // subtraction
 
 	    let tmp_y_off = y_off.abs();
 
 	    if p.offset.y < tmp_y_off {
-		let mut amount_to_carry = 0;
-		//= 1 + (tmp_y_off / 100.0) as u32;
-		// todo: how to get rid of this whileloop?
 		if p.y < (tmp_y_off / 100.0) as u32 {
 		    panic!("Can't carry as {} < {} ", p.y, tmp_y_off);
 		}
+		// todo: how to get rid of this whileloop?
 		while p.offset.y < tmp_y_off {
 		    p.offset.y += 100.0;
 		    p.y -= 1;
@@ -126,8 +108,6 @@ impl Position {
 	else {
 	    p.offset.y = y_off;
 	}
-	
-	println!("{:#?}", p);
         return p;
     }
 

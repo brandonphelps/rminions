@@ -13,6 +13,13 @@ pub fn manhat_distance(x1: u32, y1: u32, x2: u32, y2: u32) -> u32 {
     x_dist.abs() as u32 + y_dist.abs() as u32
 }
 
+// whats that dudes name? 
+pub fn uclid_distance(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
+    let x_dist = (x2 - x1).powf(2.0);
+    let y_dist = (y2 - y1).powf(2.0);
+    return (x_dist + y_dist).sqrt();
+}
+
 pub struct Path {
     // should use position?
     pub path_points: Vec<(u32, u32)>,
