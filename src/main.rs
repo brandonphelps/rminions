@@ -4,6 +4,7 @@ mod game_state;
 mod utils;
 
 use std::{thread, time};
+use std::time::{Duration, Instant};
 
 use sdl2;
 use sdl2::event::Event;
@@ -36,8 +37,6 @@ fn generate_pathing_program(path: &Path) -> Vec<Command> {
 }
 
 fn main() -> () {
-    println!("Hello World: Asteroids is not currently providing a gui layer :(");
-
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -61,6 +60,8 @@ fn main() -> () {
     // todo: determine these programatically.
     let iron_pos = (10, 5);
     let newly_spawned_entity_id = 3;
+
+    let mut programed_units = Vec::<Entity>::new();
 
     let mut frame = 0;
     let mut informed_the_unit = false;
@@ -88,40 +89,45 @@ fn main() -> () {
             game_input.create_unit = true;
         }
 
+	if frame % 60 == 0 {
+	    game_input.create_unit = true;
+	}
+
         // if frame == 4 || frame == 5 || frame == 6 {
         //     game_input.create_unit = true;
         // }
 
         // should be like get programable units.
-        if !informed_the_unit {
-            for e in current_state.get_units() {
-                if e.0 == newly_spawned_entity_id {
-                    let mut prog = Vec::new();
-                    prog.push(Command::MoveD(Position::new(iron_pos.0, iron_pos.1)));
-                    prog.push(Command::Harvest(Entity(2)));
-                    prog.push(Command::MoveD(Position::new(0, 0)));
-                    // entity 1 is hive.
-                    prog.push(Command::Deposit(Entity(1)));
-                    game_input
-                        .user_commands
-                        .push(UserCommand::LoadProgram(*e, prog));
-                    informed_the_unit = true;
-                }
+        for e in current_state.get_programable_units() {
+	    if ! programed_units.contains(e) {
+                let mut prog = Vec::new();
+                prog.push(Command::MoveD(Position::new(iron_pos.0, iron_pos.1)));
+                prog.push(Command::Harvest(Entity(2)));
+                prog.push(Command::MoveD(Position::new(0, 0)));
+                // entity 1 is hive.
+                prog.push(Command::Deposit(Entity(1)));
+                game_input
+                    .user_commands
+                    .push(UserCommand::LoadProgram(*e, prog));
+		programed_units.push(*e);
             }
         }
+
+	let start = Instant::now();
         current_state = game_state::game_update(current_state, 0.1, &game_input);
-
         game_state::game_sdl2_render(&current_state, &mut canvas);
-
         // how expensive is this?
         canvas.present();
+	let end = start.elapsed();
+	println!("Update and render draw time: {}", end.as_millis());
 
-        // todo: get a consistant sleep time aiming for 60 fps. (also recalcualte to be seconds per frame calc).
+        // todo: get a consistant sleep time aiming for 60 fps.
+	// (also recalcualte to be seconds per frame calc).
         let ten_millis = time::Duration::from_millis(10);
 
         thread::sleep(ten_millis);
 
-        println!("game state {}\n{}", frame, current_state.string());
+        // println!("game state {}\n{}", frame, current_state.string());
 
         // clear out input to a defaulted state.
         game_input = game_state::GameInput::default();
