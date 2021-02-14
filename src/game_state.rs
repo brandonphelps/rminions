@@ -22,6 +22,7 @@ use crate::utils::manhat_distance;
 /// @brief a positional offset centered on the x/y pos
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct PosOffset {
+    // todo: change these to u32
     x: f32,
     y: f32,
 }
@@ -58,31 +59,80 @@ impl Position {
 
     /// @brief position, but without default
     pub fn new_with_offset(x: u32, y: u32, x_off: f32, y_off: f32) -> Self {
+	println!("New with offset");
         let mut p = Self::new(x, y);
         let mut x_remainder_over = x_off;
         let mut y_remainder_over = y_off;
 
         if x_off >= 100.0 {
             let x_carry_over = x_off / 100.0;
-
             p.x += x_carry_over as u32;
+            p.offset.x = x_off % 100.0;
+        } else if x_off < 0.0 {
+	    // subtraction
 
-            x_remainder_over = x_off % 100.0;
-        }
+	    let tmp_x_off = x_off.abs();
+
+	    if p.offset.x < tmp_x_off {
+		let mut amount_to_carry = 0;
+		//= 1 + (tmp_x_off / 100.0) as u32;
+		// todo: how to get rid of this whileloop?
+		if p.x < (tmp_x_off / 100.0) as u32 {
+		    panic!("Can't carry as {} < {} ", p.x, tmp_x_off);
+		}
+		while p.offset.x < tmp_x_off {
+		    p.offset.x += 100.0;
+		    p.x -= 1;
+		}
+		p.offset.x -= tmp_x_off;
+	    }
+	} else {
+	    p.offset.x = x_off;
+	}
+
+
+
+	///
+	//  30
+	// -19
+	// ----
+	//  11
+
+	// 
+
         if y_off >= 100.0 {
             let y_carry_over = y_off / 100.0;
             p.y += y_carry_over as u32;
             y_remainder_over = y_off % 100.0;
-        }
+        } else if y_off < 0.0 {
+	    // subtraction
 
-        p.offset = PosOffset {
-            x: x_remainder_over,
-            y: y_remainder_over,
-        };
+	    let tmp_y_off = y_off.abs();
+
+	    if p.offset.y < tmp_y_off {
+		let mut amount_to_carry = 0;
+		//= 1 + (tmp_y_off / 100.0) as u32;
+		// todo: how to get rid of this whileloop?
+		if p.y < (tmp_y_off / 100.0) as u32 {
+		    panic!("Can't carry as {} < {} ", p.y, tmp_y_off);
+		}
+		while p.offset.y < tmp_y_off {
+		    p.offset.y += 100.0;
+		    p.y -= 1;
+		}
+		p.offset.y -= tmp_y_off;
+	    }
+	}
+	else {
+	    p.offset.y = y_off;
+	}
+	
+	println!("{:#?}", p);
         return p;
     }
 
     pub fn add(&self, other: &Self) -> Self {
+	println!("Add");
         let x_off = other.offset.x + self.offset.x;
         let y_off = other.offset.y + self.offset.y;
 
@@ -537,6 +587,7 @@ fn movement_system(
         if e_collision != entity {
             match positions.get(&e_collision) {
                 Some(t) => {
+		    // need bounding box collision rather than point collision.
                     if t.x == new_pos.x && t.y == new_pos.y {
                         println!("A collision has occured at {}, {}", t.x, t.y);
                         is_colliding = true;
@@ -573,7 +624,7 @@ fn movement_system(
 
 // hive should be the only building that is non moveable.
 // all other "buildings" are moveable units.
-pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> GameState {
+pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> GameState {
     // this clone is cloning a &GameState and not a GameState?
     let mut new_game_state = game_state.clone();
 
@@ -691,27 +742,35 @@ pub fn game_update(game_state: GameState, _dt: f64, game_input: &GameInput) -> G
                         }
                         Command::MoveD(destination) => {
                             println!("Moving: {:#?}", destination);
-			    let mut new_x = 0;
-			    let mut new_y = 0;
-
+			    let new_x;
+			    let new_y;
+			    let mut new_offset_x;
+			    let mut new_offset_y;
 			    {
 				let tmp_p = new_game_state.positions.get(&e).unwrap();
+				// current position
+				println!("Current position: {:#?}", tmp_p);
+				let speed = 10.0; // meter per second
 				new_x = tmp_p.x;
 				new_y = tmp_p.y;
+				new_offset_x = tmp_p.offset.x;
+				new_offset_y = tmp_p.offset.y;
+				// 1 is the speed 1 meter per second. 
 				if tmp_p.x > destination.x {
-				    new_x = tmp_p.x - 1;
+				    new_offset_x -= speed * dt;
 				} else if tmp_p.x < destination.x {
-				    new_x = tmp_p.x + 1;
+				    new_offset_x += speed * dt;
 				}
 				else { 
 				    if tmp_p.y > destination.y {
-					new_y = tmp_p.y - 1;
+					new_offset_y -= speed * dt;
 				    } else if tmp_p.y < destination.y {
-					new_y = tmp_p.y + 1;
+					new_offset_y += speed * dt;
 				    }
 				}
 			    }
-			    let new_pos = Position::new(new_x, new_y);
+			    let new_pos = Position::new_with_offset(new_x, new_y,
+								    new_offset_x, new_offset_y);
 			    println!("Moving to new position: {:#?}", new_pos);
 			    movement_system(&e,
 					    &mut new_game_state.positions,
@@ -772,14 +831,15 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
 
     // draw grid.
     // display aspect.
-    let pixels_per_meter: u16 = 30;
+    let pixels_per_meter: u16 = 50;
 
     // todo: game state should have a world bounds.
     for x_pos in 0..20 {
         for y_pos in 0..20 {
             // fill rect operates in visible pixel space.
             // todo: have function for translate between pixel space -> world space and vise versa.
-            let vis_tile_pos = world_to_display(&Position::new(x_pos, y_pos), pixels_per_meter);
+            let vis_tile_pos = world_to_display(&Position::new(x_pos, y_pos),
+						pixels_per_meter);
             // let tile_width = Position::new(tile_width_meters, tile_width_meters);
             // let tile_draw = world_to_display(&tile_pos, pixels_per_meter);
             // let tile_draw_w = world_to_display(&tile_width, pixels_per_meter);
@@ -1018,5 +1078,41 @@ mod tests {
         // 2 + 2 + 1
         assert_eq!(p5.y, 5);
         assert_eq!(p5.offset.x, 0.0);
+    }
+
+    #[test]
+    fn test_position_offsets_base() {
+	let p1 = Position::new_with_offset(1, 1, 0.0, 0.0);
+	let p2 = Position { x: 1, y: 1, offset : PosOffset { x: 0.0, y: 0.0 }};
+	assert_eq!(p1, p2);
+    }
+
+    #[test]
+    fn test_position_offsets_negative_value() {
+    	let p1 = Position::new_with_offset(1, 1, 0.0, 0.0);
+	let p3 = Position::new_with_offset(2, 1, -100.0, 0.0);
+	assert_eq!(p1, p3);
+
+	let p4 = Position::new_with_offset(1, 40, 0.0, -3900.0);
+
+	assert_eq!(p1, p4);
+    }
+    #[test]
+    fn test_position_always_store_positives() {
+
+	let p5 = Position::new_with_offset(1, 1, -20.0, 0.0);
+	assert_eq!(p5, Position {x : 0, y: 1, offset: PosOffset { x: 80.0, y: 0.0 }});
+    }
+    #[test]
+    fn test_position_with_remainder() {
+	let p5 = Position::new_with_offset(1, 2, 30.0, 20.0);
+	let p6 = Position::new_with_offset(1, 0, -32.0, 200.0);
+
+	assert_eq!(p6, Position {x : 0, y: 2, offset: PosOffset { x: 68.0, y: 0.0 }});
+	
+	let p5_p6 = Position::new_with_offset(1, 4, 98.0, 20.0);
+
+	assert_eq!(p5.add(&p6), p5_p6);
+
     }
 }

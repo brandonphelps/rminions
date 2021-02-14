@@ -15,10 +15,11 @@ use sdl2::keyboard::Keycode;
 
 use entity_manager::Entity;
 use game_state::{Command, Position, UserCommand};
-use utils::{generate_path, Path};
+use utils::{Path};
 
 // todo: create gui implementation if a user wanted to play the game themselves.
 
+#[allow(dead_code)]
 fn generate_pathing_program(path: &Path) -> Vec<Command> {
     let mut program = Vec::<Command>::new();
 
@@ -64,8 +65,8 @@ fn main() -> () {
 
     let mut frame = 0;
     let mut informed_the_unit = false;
-
-    'running: while frame < 2000 {
+    let max_frame = 20000;
+    'running: while frame < max_frame {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -119,7 +120,7 @@ fn main() -> () {
 
 
 	// todo: get a consistant sleep time aiming for 60 fps. (also recalcualte to be seconds per frame calc).
-        let ten_millis = time::Duration::from_millis(1000);
+        let ten_millis = time::Duration::from_millis(10);
 
         thread::sleep(ten_millis);
 
@@ -131,14 +132,14 @@ fn main() -> () {
     }
 
     // hold the app and wait for user to quit.
-    'running: loop {
+    'holding_loop: loop {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => break 'running,
+                } => break 'holding_loop,
                 _ => {}
             }
         }
