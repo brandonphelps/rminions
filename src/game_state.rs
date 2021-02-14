@@ -59,6 +59,13 @@ impl Position {
         }
     }
 
+    pub fn get_x(&self) -> u32 {
+	self.x
+    }
+    pub fn get_y(&self) -> u32 {
+	self.y
+    }
+
     pub fn distance(&self, other: &Self) -> f32 {
         let p_x1 = self.x as f32 * 100.0 + self.offset.x;
         let p_y1 = self.y as f32 * 100.0 + self.offset.y;
@@ -335,19 +342,22 @@ impl GameState {
     }
 
     pub fn get_programable_units(&self) -> Vec<&Entity> {
-	return self.memory.entities.iter().collect();
+        return self.memory.entities.iter().collect();
     }
 
-    #[allow(dead_code)]
+    pub fn get_entity_position(&self, entity: &Entity) -> Position {
+	return self.positions.get(entity).unwrap().clone();
+    }
+
     pub fn get_mineable_nodes(&self) -> Vec<&Entity> {
-        let mut result = Vec::new();
-        for e in self.entity_manager.entities.iter() {
-            match self.iron_mines.get(&e) {
-                Some(_t) => result.push(e),
-                None => (),
-            }
+        return self.solid_containers.entities.iter().collect();
+    }
+
+    pub fn get_mineable_count(&self, mineable_entity: &Entity) -> Option<u32> {
+        match self.solid_containers.get(mineable_entity) {
+            Some(t) => Some(t.iron_count),
+            None => None,
         }
-        return result;
     }
 
     // testing / debug
@@ -459,6 +469,23 @@ pub fn game_load() -> GameState {
         p.value = true;
     }
 
+    let iron_2_two = new_game_state.entity_manager.create();
+
+    {
+        let mut p = new_game_state.solid_containers.create(&iron_2_two);
+        p.iron_count = 900;
+    }
+    {
+        let mut p = new_game_state.positions.create(&iron_2_two);
+        p.x = 5;
+        p.y = 10;
+    }
+
+    {
+        let mut p = new_game_state.collision.create(&iron_2_two);
+        p.value = true;
+    }
+
     // unit
     // let new_entity = new_game_state.entity_manager.create();
     // println!("First unit!: {}", &new_entity.0);
@@ -495,6 +522,7 @@ fn harvest_system(
     harvest_entity: &Entity,
     harvest_type: &str,
 ) {
+    println!("Harvest system");
     // todo: do the error handling.
     let entity_pos = positions.get(entity).unwrap();
     let harvest_pos = positions.get(harvest_entity).unwrap();
@@ -517,6 +545,7 @@ fn harvest_system(
         }
         None => {
             // harvest entity doesn't have an associated container to pull from.
+	    println!("Nothing to harvest");
             return;
         }
     }
@@ -526,13 +555,18 @@ fn harvest_system(
         if harvest_type == "iron" {
             harvest_c.iron_count -= 1;
         }
+	else {
+	    panic!("Unknown harvest type");
+	}
     }
 
     {
         let mut entity_c = solid_containers.get_mut(entity).unwrap();
         if harvest_type == "iron" {
             entity_c.iron_count += 1;
-        }
+        } else {
+	    panic!("Unknown harvest type");
+	}
     }
 
     // can't do this due to barrow system.
@@ -562,10 +596,9 @@ fn movement_system(
     collisions: &mut ComponentManager<Collision>,
     new_pos: Position,
 ) {
-    let mut is_colliding = false;
-
 
     // collision movement system.
+    let mut is_colliding = false;
     // for e_collision in collisions.entities.iter() {
     //     // only do collision detection on non myself entities.
     //     // todo: some rust iterator thing for this?
@@ -716,6 +749,7 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
                             }
                         }
                         Command::MoveD(destination) => {
+			    // println!("Move D: {},{}", destination.get_x(), destination.get_y());
                             let new_x;
                             let new_y;
                             let mut new_offset_x;
@@ -724,7 +758,7 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
                                 let tmp_p = new_game_state.positions.get(&e).unwrap();
                                 // current position
 
-                                let speed = 100.0; // meter per second
+                                let speed = 10.0; // meter per second
                                 new_x = tmp_p.x;
                                 new_y = tmp_p.y;
                                 new_offset_x = tmp_p.offset.x;
@@ -745,17 +779,19 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
                                     destination.y as f32 * 100.0 + destination.offset.y,
                                 );
 
-                                if tmp_p.x >= destination.x && x_dist > 5.0 {
+                                if tmp_p.x >= destination.x && x_dist > 2.5 {
                                     new_offset_x -= speed * dt;
-                                } else if tmp_p.x <= destination.x && x_dist > 5.0 {
+                                } else if tmp_p.x <= destination.x && x_dist > 2.5 {
                                     new_offset_x += speed * dt;
                                 }
-                                if tmp_p.y >= destination.y && y_dist > 5.0 {
+
+                                if tmp_p.y >= destination.y && y_dist > 2.5 {
                                     new_offset_y -= speed * dt;
-                                } else if tmp_p.y <= destination.y && y_dist > 5.0 {
+                                } else if tmp_p.y <= destination.y && y_dist > 2.5 {
                                     new_offset_y += speed * dt;
                                 }
                             }
+
 
                             let new_pos =
                                 Position::new_with_offset(new_x, new_y, new_offset_x, new_offset_y);
