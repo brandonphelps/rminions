@@ -564,6 +564,7 @@ fn movement_system(
 ) {
     let mut is_colliding = false;
 
+
     // collision movement system.
     // for e_collision in collisions.entities.iter() {
     //     // only do collision detection on non myself entities.

@@ -80,6 +80,8 @@ fn main() -> () {
             };
         }
 
+
+	// User code section for controls purposes. 
         // set values get user input.
 
         // if frame == 1 {
@@ -112,6 +114,8 @@ fn main() -> () {
 		programed_units.push(*e);
             }
         }
+
+	// game input is finished perform server updating and such.  
 
 	let start = Instant::now();
         current_state = game_state::game_update(current_state, 0.1, &game_input);
