@@ -11,6 +11,8 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
+use crate::utils::{uclid_distance};
+
 use crate::collision::Circle;
 use crate::entity_manager::{Entity, EntityManager};
 use crate::utils::manhat_distance;
@@ -55,6 +57,15 @@ impl Position {
             y: y,
             offset: PosOffset { x: 0.0, y: 0.0 },
         }
+    }
+
+    pub fn distance(&self, other: &Self) -> f32 {
+	let p_x1 = self.x as f32 * 100.0 + self.offset.x;
+	let p_y1 = self.y as f32 * 100.0 + self.offset.y;
+	let p_x2 = other.x as f32 * 100.0 + other.offset.x;
+	let p_y2 = other.y as f32 * 100.0 + other.offset.y;
+
+	return uclid_distance(p_x1, p_y1, p_x2, p_y2);
     }
 
     /// @brief position, but without default
@@ -522,7 +533,7 @@ fn harvest_system(
         }
     }
 
-    // can't do this do to barrow system.
+    // can't do this due to barrow system.
     // // todo: error handling.
     // match solid_containers.get_mut(entity) {
     // 	Some(mut entity_container) => {
@@ -540,14 +551,6 @@ fn harvest_system(
     // // ensure entity_container isn't full.
     // // if entity_container.
 
-    // can't do this, but can do with matches? lifetime stuff is icky?
-    // // todo: don't use string, likely use enum
-    // if harvest_type == "iron" {
-    // 	if harvest_container.iron_count > 0 {
-    // 	    harvest_container.iron_count -= 1;
-    // 	    entity_container.iron_count += 1;
-    // 	}
-    // }
 }
 
 // not all items that have positions are moveable, should there exist moveable componetns?
@@ -730,15 +733,19 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
 				let tmp_p = new_game_state.positions.get(&e).unwrap();
 				// current position
 				println!("Current position: {:#?}", tmp_p);
-				let speed = 10.0; // meter per second
+				let speed = 100.0; // meter per second
 				new_x = tmp_p.x;
 				new_y = tmp_p.y;
 				new_offset_x = tmp_p.offset.x;
 				new_offset_y = tmp_p.offset.y;
-				// 1 is the speed 1 meter per second. 
-				if tmp_p.x > destination.x {
+
+				// 1 is the speed 1 meter per second.
+				
+				let x_dist = uclid_distance(tmp_p.x as f32 * 100.0 + tmp_p.offset.x, 0.0,
+							    destination.x as f32 * 100.0 + destination.offset.x, 0.0);
+				if tmp_p.x > destination.x && x_dist > 5.0 {
 				    new_offset_x -= speed * dt;
-				} else if tmp_p.x < destination.x {
+				} else if tmp_p.x < destination.x  && x_dist > 5.0 {
 				    new_offset_x += speed * dt;
 				}
 				else { 
@@ -749,6 +756,7 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
 				    }
 				}
 			    }
+
 			    let new_pos = Position::new_with_offset(new_x, new_y,
 								    new_offset_x, new_offset_y);
 			    println!("Moving to new position: {:#?}", new_pos);
@@ -757,7 +765,7 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
 					    &mut new_game_state.collision,
 					    new_pos.clone());
 
-			    if ! (new_pos.x == destination.x && new_pos.y == destination.y) {
+			    if new_pos.distance(&destination) > 50.0 {
 				move_pc = false;
 			    }
                         }
@@ -1093,6 +1101,21 @@ mod tests {
 	let p5_p6 = Position::new_with_offset(1, 4, 98.0, 20.0);
 
 	assert_eq!(p5.add(&p6), p5_p6);
+
+    }
+
+    #[test]
+    fn test_position_distance() {
+	let p1 = Position::new(1, 2);
+	let p2 = Position::new(1, 2);
+
+	assert_eq!(p1.distance(&p2), 0.0);
+
+	let p3 = Position::new(2, 2);
+	assert_eq!(p1.distance(&p3), 100.0);
+
+	let p4 = Position::new_with_offset(1, 2, 50.0, 0.0);
+	assert_eq!(p1.distance(&p4), 50.0);
 
     }
 }
