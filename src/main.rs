@@ -3,6 +3,8 @@ mod entity_manager;
 mod game_state;
 mod utils;
 
+use std::{thread, time};
+
 use sdl2;
 use sdl2::event::Event;
 // use sdl2::EventPump;
@@ -13,10 +15,11 @@ use sdl2::keyboard::Keycode;
 
 use entity_manager::Entity;
 use game_state::{Command, Position, UserCommand};
-use utils::{generate_path, Path};
+use utils::Path;
 
 // todo: create gui implementation if a user wanted to play the game themselves.
 
+#[allow(dead_code)]
 fn generate_pathing_program(path: &Path) -> Vec<Command> {
     let mut program = Vec::<Command>::new();
 
@@ -60,7 +63,9 @@ fn main() -> () {
     let newly_spawned_entity_id = 3;
 
     let mut frame = 0;
-    while frame < 60 {
+    let mut informed_the_unit = false;
+    let max_frame = 20000;
+    'running: while frame < max_frame {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -68,7 +73,7 @@ fn main() -> () {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => {
-                    frame = 60;
+                    break 'running;
                 }
                 _ => {}
             };
@@ -88,31 +93,30 @@ fn main() -> () {
         // }
 
         // should be like get programable units.
-        for e in current_state.get_units() {
-            if e.0 == newly_spawned_entity_id {
-                let path = generate_path((0, 1), iron_pos);
-
-                let mut prog = generate_pathing_program(&path);
-                let mut return_path = generate_pathing_program(&generate_path(iron_pos, (0, 1)));
-                // entity 2 is iron mine
-                prog.push(Command::Harvest(Entity(2)));
-                prog.append(&mut return_path);
-                // entity 1 is hive.
-                prog.push(Command::Deposit(Entity(1)));
-                game_input
-                    .user_commands
-                    .push(UserCommand::LoadProgram(*e, prog));
+        if !informed_the_unit {
+            for e in current_state.get_units() {
+                if e.0 == newly_spawned_entity_id {
+                    let mut prog = Vec::new();
+                    prog.push(Command::MoveD(Position::new(iron_pos.0, iron_pos.1)));
+                    prog.push(Command::Harvest(Entity(2)));
+                    prog.push(Command::MoveD(Position::new(0, 0)));
+                    // entity 1 is hive.
+                    prog.push(Command::Deposit(Entity(1)));
+                    game_input
+                        .user_commands
+                        .push(UserCommand::LoadProgram(*e, prog));
+                    informed_the_unit = true;
+                }
             }
         }
-
         current_state = game_state::game_update(current_state, 0.1, &game_input);
 
         game_state::game_sdl2_render(&current_state, &mut canvas);
 
+        // how expensive is this?
         canvas.present();
 
-        use std::{thread, time};
-
+        // todo: get a consistant sleep time aiming for 60 fps. (also recalcualte to be seconds per frame calc).
         let ten_millis = time::Duration::from_millis(10);
 
         thread::sleep(ten_millis);
@@ -125,14 +129,14 @@ fn main() -> () {
     }
 
     // hold the app and wait for user to quit.
-    'running: loop {
+    'holding_loop: loop {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => break 'running,
+                } => break 'holding_loop,
                 _ => {}
             }
         }
