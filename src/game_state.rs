@@ -60,10 +60,10 @@ impl Position {
     }
 
     pub fn get_x(&self) -> u32 {
-	self.x
+        self.x
     }
     pub fn get_y(&self) -> u32 {
-	self.y
+        self.y
     }
 
     pub fn distance(&self, other: &Self) -> f32 {
@@ -346,7 +346,7 @@ impl GameState {
     }
 
     pub fn get_entity_position(&self, entity: &Entity) -> Position {
-	return self.positions.get(entity).unwrap().clone();
+        return self.positions.get(entity).unwrap().clone();
     }
 
     pub fn get_mineable_nodes(&self) -> Vec<&Entity> {
@@ -456,7 +456,7 @@ pub fn game_load() -> GameState {
 
     {
         let mut p = new_game_state.solid_containers.create(&iron_e);
-        p.iron_count = 900;
+        p.iron_count = 2;
     }
     {
         let mut p = new_game_state.positions.create(&iron_e);
@@ -545,7 +545,7 @@ fn harvest_system(
         }
         None => {
             // harvest entity doesn't have an associated container to pull from.
-	    println!("Nothing to harvest");
+            println!("Nothing to harvest");
             return;
         }
     }
@@ -554,10 +554,9 @@ fn harvest_system(
         let mut harvest_c = solid_containers.get_mut(harvest_entity).unwrap();
         if harvest_type == "iron" {
             harvest_c.iron_count -= 1;
+        } else {
+            panic!("Unknown harvest type");
         }
-	else {
-	    panic!("Unknown harvest type");
-	}
     }
 
     {
@@ -565,8 +564,8 @@ fn harvest_system(
         if harvest_type == "iron" {
             entity_c.iron_count += 1;
         } else {
-	    panic!("Unknown harvest type");
-	}
+            panic!("Unknown harvest type");
+        }
     }
 
     // can't do this due to barrow system.
@@ -596,7 +595,6 @@ fn movement_system(
     collisions: &mut ComponentManager<Collision>,
     new_pos: Position,
 ) {
-
     // collision movement system.
     let mut is_colliding = false;
     // for e_collision in collisions.entities.iter() {
@@ -749,7 +747,7 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
                             }
                         }
                         Command::MoveD(destination) => {
-			    // println!("Move D: {},{}", destination.get_x(), destination.get_y());
+                            // println!("Move D: {},{}", destination.get_x(), destination.get_y());
                             let new_x;
                             let new_y;
                             let mut new_offset_x;
@@ -791,7 +789,6 @@ pub fn game_update(game_state: GameState, dt: f32, game_input: &GameInput) -> Ga
                                     new_offset_y += speed * dt;
                                 }
                             }
-
 
                             let new_pos =
                                 Position::new_with_offset(new_x, new_y, new_offset_x, new_offset_y);

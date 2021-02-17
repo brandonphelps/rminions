@@ -3,7 +3,8 @@ mod entity_manager;
 mod game_state;
 mod utils;
 
-use std::time::{Instant};
+use std::collections::HashMap;
+use std::time::Instant;
 use std::{thread, time};
 
 use sdl2;
@@ -19,6 +20,15 @@ use game_state::{Command, Position, UserCommand};
 use utils::Path;
 
 // todo: create gui implementation if a user wanted to play the game themselves.
+
+fn strip_empties(x: &mut HashMap<Entity, Entity>, value: &Entity) {
+    let tmp = x.clone();
+    let empties = tmp.iter().filter(|&(_, &v)| v.0 == value.0).map(|(k, _)| k);
+
+    for k in empties {
+        x.remove(k);
+    }
+}
 
 #[allow(dead_code)]
 fn generate_pathing_program(path: &Path) -> Vec<Command> {
@@ -36,10 +46,17 @@ fn generate_pathing_program(path: &Path) -> Vec<Command> {
     return program;
 }
 
-fn program_harvest_unit(entity: &Entity, target_entity: &Entity, target_pos: &Position) -> Vec<Command> {
+fn program_harvest_unit(
+    entity: &Entity,
+    target_entity: &Entity,
+    target_pos: &Position,
+) -> Vec<Command> {
     // should be like get programable units.
     let mut prog = Vec::new();
-    prog.push(Command::MoveD(Position::new(target_pos.get_x(), target_pos.get_y())));
+    prog.push(Command::MoveD(Position::new(
+        target_pos.get_x(),
+        target_pos.get_y(),
+    )));
     prog.push(Command::Harvest(target_entity.clone()));
     prog.push(Command::MoveD(Position::new(0, 0)));
 
@@ -72,9 +89,16 @@ fn main() -> () {
     let frame_per_second_target = 60;
     let milliseconds_per_frame = 1000.0 / frame_per_second_target as f32;
 
-    let mut programed_units = Vec::<Entity>::new();
+    // each programed unit gets a target
+    // first entity is the actor, second is the "target"
+    // let mut programed_units = Vec::<(Entity, Entity)>::new();
+    let mut programmed_units = HashMap::<Entity, Entity>::new();
+
     let mut frame = 0;
     let max_frame = 20000;
+
+    
+    
 
     let mut current_target_entity: Option<Entity> = None;
 
@@ -92,6 +116,8 @@ fn main() -> () {
             };
         }
 
+
+	
         // User code section for controls purposes.
         // set values get user input.
 
@@ -99,36 +125,63 @@ fn main() -> () {
             game_input.create_unit = true;
         }
 
+        // if the current target entity runes out of mins set it to none so we can find a new target.
+        match current_target_entity {
+            Some(current_ent) => match current_state.get_mineable_count(&current_ent) {
+                None => {
+                    current_target_entity = None;
+                }
+                Some(amount) => {
+                    if amount == 0 {
+                        strip_empties(&mut programmed_units, &current_ent);
+                        current_target_entity = None;
+
+                        println!("Mine is empty");
+                    }
+                }
+            },
+            None => {}
+        }
+
         // no current target.
         if !current_target_entity.is_some() {
             for e in current_state.get_mineable_nodes() {
-                match current_state.get_mineable_count(e) {
-                    Some(amount) => {
-                        if amount > 0 {
-                            current_target_entity = Some(*e);
+                // don't consider hive.
+                if *e != Entity(1) {
+                    match current_state.get_mineable_count(e) {
+                        Some(amount) => {
+                            if amount > 0 {
+                                println!("Setting Entity to: {}", e.0);
+                                current_target_entity = Some(*e);
+                                break;
+                            }
                         }
+                        None => {}
                     }
-                    None => {}
                 }
             }
         }
 
-	if current_target_entity.is_some() {
-	    let mine_pos = current_state.get_entity_position(&current_target_entity.unwrap());
+        if current_target_entity.is_some() {
+            let mine_pos = current_state.get_entity_position(&current_target_entity.unwrap());
 
             for e in current_state.get_programable_units() {
-		if !programed_units.contains(e) {
-		    println!("Setting actor {} target to: {}", e.0, current_target_entity.unwrap().0);
+                if !programmed_units.contains_key(e) {
+                    println!(
+                        "Setting actor {} target to: {}",
+                        e.0,
+                        current_target_entity.unwrap().0
+                    );
                     let prog = program_harvest_unit(e, &current_target_entity.unwrap(), &mine_pos);
 
                     game_input
-			.user_commands
-			.push(UserCommand::LoadProgram(*e, prog));
+                        .user_commands
+                        .push(UserCommand::LoadProgram(*e, prog));
 
-                    programed_units.push(*e);
-		}
+                    programmed_units.insert(*e, current_target_entity.unwrap().clone());
+                }
             }
-	}
+        }
 
         // game input is finished perform server updating and such.
         let start = Instant::now();
@@ -156,9 +209,6 @@ fn main() -> () {
 
     // hold the app and wait for user to quit.
     'holding_loop: loop {
-
-	
-	
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
