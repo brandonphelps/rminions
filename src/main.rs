@@ -3,6 +3,8 @@ mod entity_manager;
 mod game_state;
 mod utils;
 
+use std::collections::HashMap;
+use std::time::Instant;
 use std::{thread, time};
 
 use sdl2;
@@ -18,6 +20,15 @@ use game_state::{Command, Position, UserCommand};
 use utils::Path;
 
 // todo: create gui implementation if a user wanted to play the game themselves.
+
+fn strip_empties(x: &mut HashMap<Entity, Entity>, value: &Entity) {
+    let tmp = x.clone();
+    let empties = tmp.iter().filter(|&(_, &v)| v.0 == value.0).map(|(k, _)| k);
+
+    for k in empties {
+        x.remove(k);
+    }
+}
 
 #[allow(dead_code)]
 fn generate_pathing_program(path: &Path) -> Vec<Command> {
@@ -35,9 +46,26 @@ fn generate_pathing_program(path: &Path) -> Vec<Command> {
     return program;
 }
 
-fn main() -> () {
-    println!("Hello World: Asteroids is not currently providing a gui layer :(");
+fn program_harvest_unit(
+    entity: &Entity,
+    target_entity: &Entity,
+    target_pos: &Position,
+) -> Vec<Command> {
+    // should be like get programable units.
+    let mut prog = Vec::new();
+    prog.push(Command::MoveD(Position::new(
+        target_pos.get_x(),
+        target_pos.get_y(),
+    )));
+    prog.push(Command::Harvest(target_entity.clone()));
+    prog.push(Command::MoveD(Position::new(0, 0)));
 
+    // entity 1 is hive.
+    prog.push(Command::Deposit(Entity(1)));
+    return prog;
+}
+
+fn main() -> () {
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -58,13 +86,22 @@ fn main() -> () {
     let mut current_state = game_state::game_load();
     let mut game_input = game_state::GameInput::default();
 
-    // todo: determine these programatically.
-    let iron_pos = (10, 5);
-    let newly_spawned_entity_id = 3;
+    let frame_per_second_target = 60;
+    let milliseconds_per_frame = 1000.0 / frame_per_second_target as f32;
+
+    // each programed unit gets a target
+    // first entity is the actor, second is the "target"
+    // let mut programed_units = Vec::<(Entity, Entity)>::new();
+    let mut programmed_units = HashMap::<Entity, Entity>::new();
 
     let mut frame = 0;
-    let mut informed_the_unit = false;
     let max_frame = 20000;
+
+    
+    
+
+    let mut current_target_entity: Option<Entity> = None;
+
     'running: while frame < max_frame {
         for event in event_pump.poll_iter() {
             match event {
@@ -79,49 +116,91 @@ fn main() -> () {
             };
         }
 
+
+	
+        // User code section for controls purposes.
         // set values get user input.
 
-        // if frame == 1 {
-        //     game_input.create_hive = true;
-        // }
         if frame == 2 {
             game_input.create_unit = true;
         }
 
-        // if frame == 4 || frame == 5 || frame == 6 {
-        //     game_input.create_unit = true;
-        // }
+        // if the current target entity runes out of mins set it to none so we can find a new target.
+        match current_target_entity {
+            Some(current_ent) => match current_state.get_mineable_count(&current_ent) {
+                None => {
+                    current_target_entity = None;
+                }
+                Some(amount) => {
+                    if amount == 0 {
+                        strip_empties(&mut programmed_units, &current_ent);
+                        current_target_entity = None;
 
-        // should be like get programable units.
-        if !informed_the_unit {
-            for e in current_state.get_units() {
-                if e.0 == newly_spawned_entity_id {
-                    let mut prog = Vec::new();
-                    prog.push(Command::MoveD(Position::new(iron_pos.0, iron_pos.1)));
-                    prog.push(Command::Harvest(Entity(2)));
-                    prog.push(Command::MoveD(Position::new(0, 0)));
-                    // entity 1 is hive.
-                    prog.push(Command::Deposit(Entity(1)));
-                    game_input
-                        .user_commands
-                        .push(UserCommand::LoadProgram(*e, prog));
-                    informed_the_unit = true;
+                        println!("Mine is empty");
+                    }
+                }
+            },
+            None => {}
+        }
+
+        // no current target.
+        if !current_target_entity.is_some() {
+            for e in current_state.get_mineable_nodes() {
+                // don't consider hive.
+                if *e != Entity(1) {
+                    match current_state.get_mineable_count(e) {
+                        Some(amount) => {
+                            if amount > 0 {
+                                println!("Setting Entity to: {}", e.0);
+                                current_target_entity = Some(*e);
+                                break;
+                            }
+                        }
+                        None => {}
+                    }
                 }
             }
         }
+
+        if current_target_entity.is_some() {
+            let mine_pos = current_state.get_entity_position(&current_target_entity.unwrap());
+
+            for e in current_state.get_programable_units() {
+                if !programmed_units.contains_key(e) {
+                    println!(
+                        "Setting actor {} target to: {}",
+                        e.0,
+                        current_target_entity.unwrap().0
+                    );
+                    let prog = program_harvest_unit(e, &current_target_entity.unwrap(), &mine_pos);
+
+                    game_input
+                        .user_commands
+                        .push(UserCommand::LoadProgram(*e, prog));
+
+                    programmed_units.insert(*e, current_target_entity.unwrap().clone());
+                }
+            }
+        }
+
+        // game input is finished perform server updating and such.
+        let start = Instant::now();
         current_state = game_state::game_update(current_state, 0.1, &game_input);
-
         game_state::game_sdl2_render(&current_state, &mut canvas);
-
         // how expensive is this?
         canvas.present();
+        let end = start.elapsed();
+        if end.as_millis() as f32 > milliseconds_per_frame {
+            println!("Missed timing window on frame: {}", frame);
+        }
 
-        // todo: get a consistant sleep time aiming for 60 fps. (also recalcualte to be seconds per frame calc).
+        // todo: get a consistant sleep time aiming for 60 fps.
+        // (also recalcualte to be seconds per frame calc).
         let ten_millis = time::Duration::from_millis(10);
 
         thread::sleep(ten_millis);
 
-        println!("game state {}\n{}", frame, current_state.string());
+        // println!("game state {}\n{}", frame, current_state.string());
 
         // clear out input to a defaulted state.
         game_input = game_state::GameInput::default();
