@@ -1,6 +1,7 @@
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
-
+use sdl2::render::{Canvas, Texture, TextureCreator};
+use sdl2::video::{Window, WindowContext};
 
 fn circle_formula(x: u32, y: u32) -> u32 {
     return ((x * x) + (y * y)).into();
@@ -13,6 +14,62 @@ fn next_x_sq(x_sq_n: u32, y_n: u32) -> u32 {
 
 fn radius_error(x_n: i32, y_n: i32, r_n: i32) -> i32 {
     (x_n * x_n + y_n * y_n - r_n * r_n).abs()
+}
+
+fn create_circle_texture<'a>(canvas: &mut Canvas<Window>,
+			     texture_creator: &'a TextureCreator<WindowContext>,
+			     radius: i32) -> Result<Texture<'a>, String> {
+
+    let shifted_points = generate_circle_points(radius);
+    // +1 because the center is there.  
+    let mut circle_texture = texture_creator.create_texture_target(None, ((radius * 2)+1) as u32,
+								   ((radius * 2)+1) as u32).unwrap();
+    canvas.with_texture_canvas(&mut circle_texture,
+			       |canvas_context| {
+				   canvas_context.set_draw_color(Color::RGB(255, 0, 0));
+				   
+				   for point in shifted_points.iter() {
+				       canvas_context.draw_point(Point::new(point.0, point.1)).unwrap();
+				   }
+				   
+			       });
+    return Ok(circle_texture);
+}
+
+fn generate_circle_points(radius: i32) -> Vec::<(i32, i32)> {
+    let mut points = Vec::new();
+    let mut col = radius;
+    // why is this 90? if this was octects wouldn't it be 45? 
+    let degrees: f64 = 0.90;
+    let mut num_to_go = degrees.sin() * radius as f64;
+    println!("Num to go: {}", num_to_go);
+    for row in 0..num_to_go.round() as i32 {
+	let x = radius_error(col - 1, row + 1, radius);
+	let x_o = radius_error(col, row + 1, radius);
+
+	points.push((col, row));
+	points.push((row, col));
+	points.push((-1 * col, -1 * row));
+	points.push((-1 * row, -1 * col));	    
+	points.push((-1 * row, col));
+	points.push((row, -1 * col));
+	points.push((-1 * col, row));
+	points.push((col, -1 * row));
+	if x < x_o {
+	    col = col - 1;
+	}
+    }
+    // how to do this in single line? 
+    let mut shifted_points = Vec::new();
+    for i in points.iter() {
+	shifted_points.push((radius + i.0,
+			     radius + i.1));
+    }
+    for i in shifted_points.iter() {
+	assert!(i.0 >= 0);
+	assert!(i.1 >= 0);
+    }
+    return shifted_points;
 }
 
 #[cfg(test)]
@@ -41,66 +98,11 @@ mod tests {
             .unwrap();
 	canvas.clear();
 
-	let mut points = Vec::new();
-	let r = 50;
-	let mut col = r;
-	// why is this 90? if this was octects wouldn't it be 45? 
-	let degrees: f64 = 0.90;
-	let mut num_to_go = degrees.sin() * r as f64;
-	println!("Num to go: {}", num_to_go);
-	for row in 0..num_to_go.round() as i32 {
-	    let x = radius_error(col - 1, row + 1, r);
-	    let x_o = radius_error(col, row + 1, r);
-
-	    // upper half right octant
-	    points.push((col, row));
-	    points.push((row, col));
-	    points.push((-1 * col, -1 * row));
-	    points.push((-1 * row, -1 * col));	    
-	    points.push((-1 * row, col));
-	    points.push((row, -1 * col));
-	    points.push((-1 * col, row));
-	    points.push((col, -1 * row));
-
-	    // if 2 * (radius_error(col, row, r) + 1) + 1 > 0 {
-	    // 	col = col - 1;
-	    // }
-	    if x < x_o {
-		col = col - 1;
-	    }
-	}
-
-	// how to do this in single line? 
-	let mut shifted_points = Vec::new();
-	for i in points.iter() {
-	    shifted_points.push((r + i.0, r + i.1));
-	}
-	println!("Shifted");
-	for i in shifted_points.iter() {
-	    println!("{},{}", i.0, i.1);
-	    assert!(i.0 >= 0);
-	    assert!(i.1 >= 0);
-	}
-
+	let radius = 100;
+	let texture_creator: TextureCreator<_> = canvas.texture_creator();
+	let circle_texture = create_circle_texture(&mut canvas, &texture_creator, radius).unwrap();
 
 	canvas.set_draw_color(Color::RGB(0, 255, 0));
-
-	let center_point = (10, 10);
-
-	let texture_creator = canvas.texture_creator();
-	let mut circle_texture = texture_creator.create_texture_target(None, ((r * 2)+1) as u32, ((r * 2)+1) as u32).unwrap();
-	canvas.with_texture_canvas(&mut circle_texture,
-				   |canvas_context| {
-				       canvas_context.set_draw_color(Color::RGB(255, 0, 0));
-				       
-				       for point in shifted_points.iter() {
-					   canvas_context.draw_point(Point::new(point.0, point.1)).unwrap();
-				       }
-				       
-				   }
-	);
-
-	println!("copyingtexture");
 	canvas.copy(&circle_texture, None, None).unwrap();
 	canvas.present();
 
