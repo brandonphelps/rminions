@@ -2,6 +2,7 @@ mod collision;
 mod entity_manager;
 mod game_state;
 mod utils;
+mod circles;
 
 use std::collections::HashMap;
 use std::time::Instant;
