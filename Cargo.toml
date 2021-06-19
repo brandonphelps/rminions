@@ -12,7 +12,7 @@ CAN = ["socketcan"]
 
 [dependencies]
 rand="0.7.3"
-
+rlua="0.16.2"
 
 
 
