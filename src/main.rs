@@ -4,6 +4,7 @@ mod game_state;
 mod utils;
 mod circles;
 
+use rlua::Lua;
 use std::collections::HashMap;
 use std::time::Instant;
 use std::{thread, time};
@@ -66,7 +67,21 @@ fn program_harvest_unit(
     return prog;
 }
 
+fn lua_entry() -> Result<()> {
+    let lua = Lua::new();
+    lua.context(|lua_ctx| {
+        let globals = lua_ctx.globals();
+        globals.set("string_var", "hello")?;
+        globals.set("int_var", 42)?;
+    })?
+}
+
 fn main() -> () {
+
+    lua_entry();
+    return;
+
+
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
