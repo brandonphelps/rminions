@@ -1,5 +1,5 @@
 use sdl2::pixels::Color;
-use sdl2::rect::{Point, Rect};
+use sdl2::rect::{Point};
 use sdl2::render::{Canvas, Texture, TextureCreator};
 use sdl2::video::{Window, WindowContext};
 
@@ -16,7 +16,7 @@ fn radius_error(x_n: i32, y_n: i32, r_n: i32) -> i32 {
     (x_n * x_n + y_n * y_n - r_n * r_n).abs()
 }
 
-fn create_circle_texture<'a>(canvas: &mut Canvas<Window>,
+pub fn create_circle_texture<'a>(canvas: &mut Canvas<Window>,
 			     texture_creator: &'a TextureCreator<WindowContext>,
 			     radius: i32) -> Result<Texture<'a>, String> {
 
@@ -36,6 +36,14 @@ fn create_circle_texture<'a>(canvas: &mut Canvas<Window>,
     return Ok(circle_texture);
 }
 
+/// @brief generates a list of 2d points, where a line should be drawn to fill in a circle.
+/// format (x1, y1, x2, y2)
+fn generate_circle_lines(radius: i32) -> Vec::<(i32, i32, i32, i32)> {
+    let mut points = Vec::new();
+
+    return points;
+}
+ 
 fn generate_circle_points(radius: i32) -> Vec::<(i32, i32)> {
     let mut points = Vec::new();
     let mut col = radius;

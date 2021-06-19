@@ -98,9 +98,6 @@ fn main() -> () {
     let mut frame = 0;
     let max_frame = 20000;
 
-    
-    
-
     let mut current_target_entity: Option<Entity> = None;
 
     'running: while frame < max_frame {
@@ -117,8 +114,6 @@ fn main() -> () {
             };
         }
 
-
-	
         // User code section for controls purposes.
         // set values get user input.
 
