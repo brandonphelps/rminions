@@ -7,19 +7,16 @@ edition = "2018"
 
 [features]
 default = []
-# gui = ["sdl2"]
 CAN = ["socketcan"]
 
 [dependencies]
 rand="0.7.3"
 rlua="0.16.2"
 
-
-
 [dependencies.sdl2]
 version="0.34"
 default-features = false
-features = ["ttf", "image"]
+features = ["ttf", "image", "bundled"]
 optional = false
 
 

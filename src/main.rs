@@ -158,9 +158,8 @@ end
 
 fn main() -> () {
 
-    lua_entry();
-    return;
-
+    // lua_entry();
+    // return;
 
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
