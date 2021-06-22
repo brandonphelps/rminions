@@ -1,13 +1,15 @@
+mod circles;
 mod collision;
 mod entity_manager;
 mod game_state;
 mod utils;
-mod circles;
+mod widget;
 
-use std::io::BufRead;
+use std::borrow::BorrowMut;
 use rlua::Lua;
-use std::io;
 use std::collections::HashMap;
+use std::io;
+use std::io::BufRead;
 use std::time::Instant;
 use std::{thread, time};
 
@@ -91,16 +93,23 @@ fn lua_entry() -> rlua::Result<()> {
     lua.context(|lua_ctx| {
         let globals = lua_ctx.globals();
 
-        let p=  lua_ctx.load(r#"
+        let p = lua_ctx
+            .load(
+                r#"
                      global = 'foo'..'bar'
-                    "#).exec();
+                    "#,
+            )
+            .exec();
         match p {
-            Ok(r) => { Ok(r) },
-            Err(r) => { println!("{}", r); Err(r) },
+            Ok(r) => Ok(r),
+            Err(r) => {
+                println!("{}", r);
+                Err(r)
+            }
         }?;
 
         println!("hello");
-        
+
         assert_eq!(globals.get::<_, String>("global")?, "foobar");
 
         let table = lua_ctx.create_table()?;
@@ -111,44 +120,47 @@ fn lua_entry() -> rlua::Result<()> {
 
         globals.set("array_table", table)?;
 
-        lua_ctx.load(
-            r#"
+        lua_ctx
+            .load(
+                r#"
 for k, v in pairs(array_table) do
   print(k, v)
 end
-"#).exec()?;
+"#,
+            )
+            .exec()?;
 
         let print: rlua::Function = globals.get("print")?;
         print.call::<_, ()>("hello from rust")?;
 
-
-        let check_equal =
-            lua_ctx.create_function(|_, (list1, list2): (Vec<String>, Vec<String>)| {
-                Ok(list1 == list2)
-            })?;
-
-
+        let check_equal = lua_ctx
+            .create_function(|_, (list1, list2): (Vec<String>, Vec<String>)| Ok(list1 == list2))?;
 
         globals.set("check_equal", check_equal)?;
 
-
-        assert_eq!(lua_ctx.load(r#"check_equal({"a", "b", "c"}, {"d", "e", "f"})"#).eval::<bool>()?, false);
+        assert_eq!(
+            lua_ctx
+                .load(r#"check_equal({"a", "b", "c"}, {"d", "e", "f"})"#)
+                .eval::<bool>()?,
+            false
+        );
 
         print.call::<_, ()>("hello from rust")?;
 
         Ok(())
     })?;
 
-    lua.context(|lua_ctx| {    
+    lua.context(|lua_ctx| {
         let stdin = io::stdin();
         for line in stdin.lock().lines() {
             let p = lua_ctx.load(&line.unwrap()).exec();
 
             match p {
                 Ok(r) => (),
-                Err(r) => { println!("{}", r) }
+                Err(r) => {
+                    println!("{}", r)
+                }
             }
-                
         }
         Ok(())
     })?;
@@ -157,7 +169,6 @@ end
 }
 
 fn main() -> () {
-
     // lua_entry();
     // return;
 
@@ -194,119 +205,219 @@ fn main() -> () {
 
     let mut current_target_entity: Option<Entity> = None;
 
-    'running: while frame < max_frame {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => {
-                    break 'running;
-                }
-                _ => {}
-            };
-        }
+    // 'running: while frame < max_frame {
+    //     for event in event_pump.poll_iter() {
+    //         match event {
+    //             Event::Quit { .. }
+    //             | Event::KeyDown {
+    //                 keycode: Some(Keycode::Escape),
+    //                 ..
+    //             } => {
+    //                 break 'running;
+    //             }
+    //             _ => {}
+    //         };
+    //     }
 
-        // User code section for controls purposes.
-        // set values get user input.
+    //     // User code section for controls purposes.
+    //     // set values get user input.
 
-        if frame == 2 {
-            game_input.create_unit = true;
-        }
+    //     if frame == 2 {
+    //         game_input.create_unit = true;
+    //     }
 
-        // if the current target entity runes out of mins set it to none so we can find a new target.
-        match current_target_entity {
-            Some(current_ent) => match current_state.get_mineable_count(&current_ent) {
-                None => {
-                    current_target_entity = None;
-                }
-                Some(amount) => {
-                    if amount == 0 {
-                        strip_empties(&mut programmed_units, &current_ent);
-                        current_target_entity = None;
+    //     // if the current target entity runes out of mins set it to none so we can find a new target.
+    //     match current_target_entity {
+    //         Some(current_ent) => match current_state.get_mineable_count(&current_ent) {
+    //             None => {
+    //                 current_target_entity = None;
+    //             }
+    //             Some(amount) => {
+    //                 if amount == 0 {
+    //                     strip_empties(&mut programmed_units, &current_ent);
+    //                     current_target_entity = None;
 
-                        println!("Mine is empty");
-                    }
-                }
-            },
-            None => {}
-        }
+    //                     println!("Mine is empty");
+    //                 }
+    //             }
+    //         },
+    //         None => {}
+    //     }
 
-        // no current target.
-        if !current_target_entity.is_some() {
-            for e in current_state.get_mineable_nodes() {
-                // don't consider hive.
-                if *e != Entity(1) {
-                    match current_state.get_mineable_count(e) {
-                        Some(amount) => {
-                            if amount > 0 {
-                                println!("Setting Entity to: {}", e.0);
-                                current_target_entity = Some(*e);
-                                break;
-                            }
-                        }
-                        None => {}
-                    }
-                }
-            }
-        }
+    //     // no current target.
+    //     if !current_target_entity.is_some() {
+    //         for e in current_state.get_mineable_nodes() {
+    //             // don't consider hive.
+    //             if *e != Entity(1) {
+    //                 match current_state.get_mineable_count(e) {
+    //                     Some(amount) => {
+    //                         if amount > 0 {
+    //                             println!("Setting Entity to: {}", e.0);
+    //                             current_target_entity = Some(*e);
+    //                             break;
+    //                         }
+    //                     }
+    //                     None => {}
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        if current_target_entity.is_some() {
-            let mine_pos = current_state.get_entity_position(&current_target_entity.unwrap());
+    //     if current_target_entity.is_some() {
+    //         let mine_pos = current_state.get_entity_position(&current_target_entity.unwrap());
 
-            for e in current_state.get_programable_units() {
-                if !programmed_units.contains_key(e) {
-                    println!(
-                        "Setting actor {} target to: {}",
-                        e.0,
-                        current_target_entity.unwrap().0
-                    );
-                    let prog = program_harvest_unit(e, &current_target_entity.unwrap(), &mine_pos);
+    //         for e in current_state.get_programable_units() {
+    //             if !programmed_units.contains_key(e) {
+    //                 println!(
+    //                     "Setting actor {} target to: {}",
+    //                     e.0,
+    //                     current_target_entity.unwrap().0
+    //                 );
+    //                 let prog = program_harvest_unit(e, &current_target_entity.unwrap(), &mine_pos);
 
-                    game_input
-                        .user_commands
-                        .push(UserCommand::LoadProgram(*e, prog));
+    //                 game_input
+    //                     .user_commands
+    //                     .push(UserCommand::LoadProgram(*e, prog));
 
-                    programmed_units.insert(*e, current_target_entity.unwrap().clone());
-                }
-            }
-        }
+    //                 programmed_units.insert(*e, current_target_entity.unwrap().clone());
+    //             }
+    //         }
+    //     }
 
-        // game input is finished perform server updating and such.
-        let start = Instant::now();
-        current_state = game_state::game_update(current_state, 0.1, &game_input);
-        game_state::game_sdl2_render(&current_state, &mut canvas);
-        // how expensive is this?
-        canvas.present();
-        let end = start.elapsed();
-        if end.as_millis() as f32 > milliseconds_per_frame {
-            println!("Missed timing window on frame: {}", frame);
-        }
+    //     // game input is finished perform server updating and such.
+    //     let start = Instant::now();
+    //     current_state = game_state::game_update(current_state, 0.1, &game_input);
+    //     game_state::game_sdl2_render(&current_state, &mut canvas);
+    //     // how expensive is this?
+    //     canvas.present();
+    //     let end = start.elapsed();
+    //     if end.as_millis() as f32 > milliseconds_per_frame {
+    //         println!("Missed timing window on frame: {}", frame);
+    //     }
 
-        // todo: get a consistant sleep time aiming for 60 fps.
-        // (also recalcualte to be seconds per frame calc).
-        let ten_millis = time::Duration::from_millis(10);
+    //     // todo: get a consistant sleep time aiming for 60 fps.
+    //     // (also recalcualte to be seconds per frame calc).
+    //     let ten_millis = time::Duration::from_millis(10);
 
-        thread::sleep(ten_millis);
+    //     thread::sleep(ten_millis);
 
-        // println!("game state {}\n{}", frame, current_state.string());
+    //     // println!("game state {}\n{}", frame, current_state.string());
 
-        // clear out input to a defaulted state.
-        game_input = game_state::GameInput::default();
-        frame += 1;
+    //     // clear out input to a defaulted state.
+    //     game_input = game_state::GameInput::default();
+    //     frame += 1;
+    // }
+
+    struct KeyState {
+        
+    };
+
+    // need some sort of stateful item for what has focus.
+    // need to then pass the event to w/e item has current focuse
+    // then each item has a sort of "back out" option.
+
+    // w/e widget has focus is the current "top" widget. 
+    let mut widget_stack = Vec::<Box<dyn widget::Widget>>::new();
+    
+    struct Console {
+        current_string: String,
+        buffer: Vec<String>
     }
 
+    impl Console {
+        pub fn new() -> Self {
+            Self {
+                current_string: String::new(),
+                buffer: Vec::new()
+            }
+        }
+    }
+
+    impl widget::Widget for Console {
+
+        fn update(&mut self, _: f32) {
+            todo!()
+        }
+
+        fn update_event(&mut self, event: sdl2::event::Event) {
+            match event {
+                Event::KeyDown {
+                    keycode: Some(T), repeat: false, .. } => {
+                    match T {
+                        Keycode::Space => {
+                            self.current_string += " ";
+                        },
+                        Keycode::Backspace => {
+                            self.current_string.pop();
+                        }
+                        _=> (),
+                    };
+                    match T as i32 {
+                        97..=122 => {
+                            self.current_string += &format!("{}", T);
+                        },                        
+                        _ => { println!("hello"); },
+                    };
+                    println!("Current string: {}", self.current_string);
+                },
+                Event::KeyUp { keycode: Some(T), repeat: false, .. } => {
+                    
+                },
+                _ => (),
+            }
+        }
+    }
+
+    widget_stack.push(Box::new(Console::new()));
+
+    let mut temp: Box<dyn widget::Widget> = Box::new(Console::new());
+    
     // hold the app and wait for user to quit.
     'holding_loop: loop {
         for event in event_pump.poll_iter() {
+            match widget_stack.get(0) {
+                Some(ref mut widg) => {
+                    let tempp: &mut dyn widget::Widget = temp.borrow_mut();
+                    tempp.update_event(event.clone());
+                },
+                _ => { panic!("no current selected widget") },
+            }
+
             match event {
                 Event::Quit { .. }
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'holding_loop,
-                _ => {}
+                Event::KeyUp {
+                    timestamp,
+                    window_id,
+                    keycode,
+                    scancode,
+                    keymod,
+                    repeat,
+                } => {
+                    println!("Up timestamp: {}, repeat: {}, keycode: {}, keymode: {}", timestamp, repeat, keycode.unwrap(), keymod);
+                },
+                Event::KeyDown {
+                    timestamp,
+                    window_id,
+                    keycode,
+                    scancode,
+                    keymod,
+                    repeat,
+                } => {
+                    println!("Down timestamp: {}, repeat: {}, keycode: {}, keymode: {}", timestamp, repeat, keycode.unwrap(), keymod);
+                },
+
+
+                Event::MultiGesture { .. } => {
+                    println!("Got a multigesture");
+                }
+                Event::MouseButtonDown { .. } => (),
+                _ => {
+                    // println!("Got a random key press");
+                }
             }
         }
     }

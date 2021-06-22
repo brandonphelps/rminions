@@ -12,11 +12,11 @@ use sdl2::rect::Rect;
 // Texture, TextureCreator
 use sdl2::video::Window;
 
-use crate::utils::uclid_distance;
-use crate::circles::{create_circle_texture};
+use crate::circles::create_circle_texture;
 use crate::collision::Circle;
 use crate::entity_manager::{Entity, EntityManager};
 use crate::utils::manhat_distance;
+use crate::utils::uclid_distance;
 
 //
 // visual width, visual height
@@ -881,7 +881,6 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
 
     let texture_creator: TextureCreator<_> = canvas.texture_creator();
 
-
     // draw units ontop of grid.
     for entity in game_state.entity_manager.entities.iter() {
         match game_state.positions.get(&entity) {
@@ -889,12 +888,15 @@ pub fn game_sdl2_render(game_state: &GameState, canvas: &mut Canvas<Window>) -> 
                 // where to draw.
                 let vis_pos = world_to_display(pos, pixels_per_meter);
 
+                let circle_texture = create_circle_texture(canvas, &texture_creator, 10).unwrap();
 
-		let circle_texture = create_circle_texture(canvas, &texture_creator, 10).unwrap();
-
-		canvas.copy(&circle_texture, None, Rect::new(vis_pos.0 as i32,
-							     vis_pos.1 as i32,
-							     11, 11)).unwrap();
+                canvas
+                    .copy(
+                        &circle_texture,
+                        None,
+                        Rect::new(vis_pos.0 as i32, vis_pos.1 as i32, 11, 11),
+                    )
+                    .unwrap();
                 // let _p = canvas.fill_rect(Rect::new(vis_pos.0 as i32, vis_pos.1 as i32, 10, 10));
                 // how to determine what to draw?
             }
