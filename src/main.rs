@@ -5,6 +5,8 @@ mod game_state;
 mod utils;
 mod widget;
 
+use std::path::PathBuf;
+use sdl2::pixels::Color;
 use std::borrow::BorrowMut;
 use rlua::Lua;
 use std::collections::HashMap;
@@ -86,7 +88,6 @@ fn lua_entry() -> rlua::Result<()> {
         println!("{}", globals.get::<_, u8>("int_var")?);
 
         assert_eq!(globals.get::<_, String>("string_var")?, "hello");
-
         Ok(())
     })?;
 
@@ -371,6 +372,32 @@ fn main() -> () {
     widget_stack.push(Box::new(Console::new()));
 
     let mut temp: Box<dyn widget::Widget> = Box::new(Console::new());
+
+    let inputText: String = "Some text".into();
+
+    let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
+    
+    let texture_creator = canvas.texture_creator();
+
+    let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    p.push("lazy.ttf");
+    
+    println!("Font file: {}", p.to_str().unwrap());
+    let mut font = ttf_context.load_font(p, 128).unwrap();
+
+    let surface = font.render("Hello Rust!")
+        .blended(Color::RGBA(255, 0, 0, 255))
+        .map_err(|e| e.to_string()).unwrap();
+
+    let texture = texture_creator
+        .create_texture_from_surface(&surface).
+        map_err(|e| e.to_string()).unwrap();
+
+    canvas.set_draw_color(Color::RGBA(195, 217, 255, 255));
+    canvas.clear();
+
+    canvas.copy(&texture, None, None).unwrap();
+    canvas.present();
     
     // hold the app and wait for user to quit.
     'holding_loop: loop {
@@ -382,6 +409,9 @@ fn main() -> () {
                 },
                 _ => { panic!("no current selected widget") },
             }
+
+            
+
 
             match event {
                 Event::Quit { .. }
