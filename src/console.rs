@@ -72,6 +72,10 @@ impl<'ttf, 'a> DrawableWidget for Console<'ttf, 'a> {
     fn draw(&mut self, canvas: &mut Canvas<Window>, x: u32, y: u32) {
         let temp_s = self.get_current_string();
         if temp_s.len() != 0 {
+            // important that surface is member variable of
+            // class, can get segfaults on mac os x platform if not,
+            // guessing that there is some lifetime item that is being
+            // violated. 
             self.surface = Some(self.font.render(&self.get_current_string())
                 .blended(Color::RGBA(255, 0, 0, 255))
                 .map_err(|e| e.to_string()).unwrap());
