@@ -4,7 +4,13 @@ mod entity_manager;
 mod game_state;
 mod utils;
 mod widget;
+mod console;
 
+use sdl2::surface::Surface;
+use sdl2::ttf::Font;
+use sdl2::video::Window;
+use sdl2::render::Texture;
+use sdl2::render::Canvas;
 use std::path::PathBuf;
 use sdl2::pixels::Color;
 use std::borrow::BorrowMut;
@@ -18,6 +24,8 @@ use std::{thread, time};
 use sdl2;
 use sdl2::event::Event;
 // use sdl2::EventPump;
+
+use crate::console::Console;
 
 use sdl2::keyboard::Keycode;
 //use sdl2::render::{Canvas, Texture, TextureCreator};
@@ -309,109 +317,77 @@ fn main() -> () {
     //     frame += 1;
     // }
 
-    struct KeyState {
-        
-    };
-
     // need some sort of stateful item for what has focus.
     // need to then pass the event to w/e item has current focuse
     // then each item has a sort of "back out" option.
 
     // w/e widget has focus is the current "top" widget. 
     let mut widget_stack = Vec::<Box<dyn widget::Widget>>::new();
-    
-    struct Console {
-        current_string: String,
-        buffer: Vec<String>
-    }
-
-    impl Console {
-        pub fn new() -> Self {
-            Self {
-                current_string: String::new(),
-                buffer: Vec::new()
-            }
-        }
-    }
-
-    impl widget::Widget for Console {
-
-        fn update(&mut self, _: f32) {
-            todo!()
-        }
-
-        fn update_event(&mut self, event: sdl2::event::Event) {
-            match event {
-                Event::KeyDown {
-                    keycode: Some(T), repeat: false, .. } => {
-                    match T {
-                        Keycode::Space => {
-                            self.current_string += " ";
-                        },
-                        Keycode::Backspace => {
-                            self.current_string.pop();
-                        }
-                        _=> (),
-                    };
-                    match T as i32 {
-                        97..=122 => {
-                            self.current_string += &format!("{}", T);
-                        },                        
-                        _ => { println!("hello"); },
-                    };
-                    println!("Current string: {}", self.current_string);
-                },
-                Event::KeyUp { keycode: Some(T), repeat: false, .. } => {
-                    
-                },
-                _ => (),
-            }
-        }
-    }
-
     widget_stack.push(Box::new(Console::new()));
 
     let mut temp: Box<dyn widget::Widget> = Box::new(Console::new());
 
+    // font example.
     let inputText: String = "Some text".into();
-
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
-    
-    let texture_creator = canvas.texture_creator();
-
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
-    
-    println!("Font file: {}", p.to_str().unwrap());
     let mut font = ttf_context.load_font(p, 128).unwrap();
+    let texture_creator = canvas.texture_creator();
 
-    let surface = font.render("Hello Rust!")
+    let mut render_to_string = true;
+    let mut start = Instant::now();
+    canvas.clear();
+    
+    let end = start.elapsed();
+    if end.as_millis() as f32 > milliseconds_per_frame {
+        println!("Missed timing window on frame: {}", frame);
+    }
+
+    if end.as_millis() as f32 > milliseconds_per_frame {
+        render_to_string = true;
+        start = Instant::now();
+    }
+
+    let string_to_render = inputText.clone();
+    println!("looking to render string_to_render: {}", string_to_render);
+
+    let mut surface = font.render(&string_to_render)
         .blended(Color::RGBA(255, 0, 0, 255))
         .map_err(|e| e.to_string()).unwrap();
 
-    let texture = texture_creator
-        .create_texture_from_surface(&surface).
-        map_err(|e| e.to_string()).unwrap();
-
-    canvas.set_draw_color(Color::RGBA(195, 217, 255, 255));
-    canvas.clear();
-
-    canvas.copy(&texture, None, None).unwrap();
-    canvas.present();
-    
     // hold the app and wait for user to quit.
     'holding_loop: loop {
+        canvas.clear();
+        if render_to_string  {
+            let s_texture = texture_creator
+                .create_texture_from_surface(&surface).
+                map_err(|e| e.to_string()).unwrap();
+            canvas.set_draw_color(Color::RGBA(195, 217, 255, 255));
+            canvas.copy(&s_texture, None, None).unwrap();
+            render_to_string = true;
+        }
+
+        canvas.present();
+
         for event in event_pump.poll_iter() {
+
             match widget_stack.get(0) {
                 Some(ref mut widg) => {
                     let tempp: &mut dyn widget::Widget = temp.borrow_mut();
                     tempp.update_event(event.clone());
+
+                    let p = tempp.get_current_string();
+                    if p.len() == 0 {
+                    } else { 
+                        surface = font.render(&tempp.get_current_string())
+                            .blended(Color::RGBA(255, 0, 0, 255))
+                            .map_err(|e| e.to_string()).unwrap();
+                    }
+
                 },
                 _ => { panic!("no current selected widget") },
             }
-
-            
-
 
             match event {
                 Event::Quit { .. }
@@ -438,6 +414,13 @@ fn main() -> () {
                     repeat,
                 } => {
                     println!("Down timestamp: {}, repeat: {}, keycode: {}, keymode: {}", timestamp, repeat, keycode.unwrap(), keymod);
+                    match keycode {
+                        Some(Keycode::Space) => {
+                            canvas.clear();
+                        },
+                        _ => (),
+                    }
+
                 },
 
 
