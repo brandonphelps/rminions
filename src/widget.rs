@@ -1,4 +1,6 @@
 
+use sdl2::video::Window;
+use sdl2::render::Canvas;
 use sdl2::event::Event;
 
 pub trait Widget {
@@ -9,8 +11,8 @@ pub trait Widget {
     fn get_current_string(&self) -> String;
 }
 
-pub trait DrawableWidget {
-    fn draw(&self, x: u32, y: u32);
+pub trait DrawableWidget: Widget {
+    fn draw(&mut self, canvas: &mut Canvas<Window>, x: u32, y: u32);
 }
 
 

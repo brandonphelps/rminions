@@ -323,71 +323,23 @@ fn main() -> () {
 
     // w/e widget has focus is the current "top" widget. 
     let mut widget_stack = Vec::<Box<dyn widget::Widget>>::new();
-    widget_stack.push(Box::new(Console::new()));
-
-    let mut temp: Box<dyn widget::Widget> = Box::new(Console::new());
-
-    // font example.
-    let inputText: String = "Some text".into();
+    // widget_stack.push(Box::new(Console::new()));
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
-    let mut font = ttf_context.load_font(p, 128).unwrap();
-    let texture_creator = canvas.texture_creator();
-
-    let mut render_to_string = true;
-    let mut start = Instant::now();
-    canvas.clear();
-    
-    let end = start.elapsed();
-    if end.as_millis() as f32 > milliseconds_per_frame {
-        println!("Missed timing window on frame: {}", frame);
-    }
-
-    if end.as_millis() as f32 > milliseconds_per_frame {
-        render_to_string = true;
-        start = Instant::now();
-    }
-
-    let string_to_render = inputText.clone();
-    println!("looking to render string_to_render: {}", string_to_render);
-
-    let mut surface = font.render(&string_to_render)
-        .blended(Color::RGBA(255, 0, 0, 255))
-        .map_err(|e| e.to_string()).unwrap();
+    let mut temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context));
 
     // hold the app and wait for user to quit.
     'holding_loop: loop {
         canvas.clear();
-        if render_to_string  {
-            let s_texture = texture_creator
-                .create_texture_from_surface(&surface).
-                map_err(|e| e.to_string()).unwrap();
-            canvas.set_draw_color(Color::RGBA(195, 217, 255, 255));
-            canvas.copy(&s_texture, None, None).unwrap();
-            render_to_string = true;
-        }
 
+        let tempp: &mut dyn widget::DrawableWidget = temp.borrow_mut();
+        tempp.draw(&mut canvas, 0, 0);
         canvas.present();
 
         for event in event_pump.poll_iter() {
-
-            match widget_stack.get(0) {
-                Some(ref mut widg) => {
-                    let tempp: &mut dyn widget::Widget = temp.borrow_mut();
-                    tempp.update_event(event.clone());
-
-                    let p = tempp.get_current_string();
-                    if p.len() == 0 {
-                    } else { 
-                        surface = font.render(&tempp.get_current_string())
-                            .blended(Color::RGBA(255, 0, 0, 255))
-                            .map_err(|e| e.to_string()).unwrap();
-                    }
-
-                },
-                _ => { panic!("no current selected widget") },
-            }
+            let tempp: &mut dyn widget::DrawableWidget = temp.borrow_mut();
+            tempp.update_event(event.clone());
 
             match event {
                 Event::Quit { .. }
