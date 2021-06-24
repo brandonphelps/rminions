@@ -6,20 +6,13 @@ mod utils;
 mod widget;
 mod console;
 
-use sdl2::surface::Surface;
-use sdl2::ttf::Font;
-use sdl2::video::Window;
-use sdl2::render::Texture;
-use sdl2::render::Canvas;
+use std::ops::Deref;
 use std::path::PathBuf;
-use sdl2::pixels::Color;
 use std::borrow::BorrowMut;
 use rlua::Lua;
 use std::collections::HashMap;
 use std::io;
 use std::io::BufRead;
-use std::time::Instant;
-use std::{thread, time};
 
 use sdl2;
 use sdl2::event::Event;
@@ -32,7 +25,7 @@ use sdl2::keyboard::Keycode;
 //use sdl2::video::{Window, WindowContext};
 
 use entity_manager::Entity;
-use game_state::{Command, Position, UserCommand};
+use game_state::{Command, Position};
 use utils::Path;
 
 // todo: create gui implementation if a user wanted to play the game themselves.
@@ -322,24 +315,38 @@ fn main() -> () {
     // then each item has a sort of "back out" option.
 
     // w/e widget has focus is the current "top" widget. 
-    let mut widget_stack = Vec::<Box<dyn widget::Widget>>::new();
     // widget_stack.push(Box::new(Console::new()));
+
+
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
-    let mut temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context));
+    let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context));
+    let mut widget_stack = Vec::<Box<dyn widget::DrawableWidget>>::new();
+    widget_stack.push(temp);
 
     // hold the app and wait for user to quit.
     'holding_loop: loop {
         canvas.clear();
 
-        let tempp: &mut dyn widget::DrawableWidget = temp.borrow_mut();
-        tempp.draw(&mut canvas, 0, 0);
-        canvas.present();
+        // Draw for current top layer widget.
+        match widget_stack.get_mut(0) {
+            Some(ref mut widget) => {
+                println!("got a widget");
+                widget.draw(&mut canvas, 0, 0);
+                canvas.present();
+            },
+            None => (),
+        }
 
+        // event processing which is sent directly to the top layer widget.
         for event in event_pump.poll_iter() {
-            let tempp: &mut dyn widget::DrawableWidget = temp.borrow_mut();
-            tempp.update_event(event.clone());
+            match widget_stack.get_mut(0) {
+                Some(ref mut widget) => {
+                    widget.update_event(event.clone());
+                },
+                None => (),
+            }
 
             match event {
                 Event::Quit { .. }
