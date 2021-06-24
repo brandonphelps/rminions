@@ -16,7 +16,8 @@ rlua="0.16.2"
 [dependencies.sdl2]
 version="0.34"
 default-features = false
-features = ["ttf", "image", "bundled"]
+# features = "bundled", how to mark this as unix / linux only? 
+features = ["ttf", "image"]
 optional = false
 
 
