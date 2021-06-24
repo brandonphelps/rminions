@@ -321,7 +321,7 @@ fn main() -> () {
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
-    let mut temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context));
+    let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context));
     let mut widget_stack = Vec::<Box<dyn widget::DrawableWidget>>::new();
     widget_stack.push(temp);
 
@@ -329,19 +329,17 @@ fn main() -> () {
     'holding_loop: loop {
         canvas.clear();
 
+        // Draw for current top layer widget.
         match widget_stack.get_mut(0) {
             Some(ref mut widget) => {
                 println!("got a widget");
                 widget.draw(&mut canvas, 0, 0);
-                // let tempp: &mut &Box<dyn widget::DrawableWidget> = widget;
-                // tempp.draw(&mut canvas, 0, 0);
                 canvas.present();
-
             },
             None => (),
         }
 
-
+        // event processing which is sent directly to the top layer widget.
         for event in event_pump.poll_iter() {
             match widget_stack.get_mut(0) {
                 Some(ref mut widget) => {
