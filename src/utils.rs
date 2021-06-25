@@ -97,6 +97,21 @@ pub fn generate_path(start_pos: (u32, u32), end_pos: (u32, u32)) -> Path {
     return r_path;
 }
 
+/// Returns a list of internals where each tuple contains a start and end point.
+/// space is the amount between each internal.
+/// count, number of intervals to return.
+/// first internal will start at [0, space].
+// length of vec == count
+pub fn spaced_internals(space: u32, count: u32) -> Vec<(u32, u32)> {
+    let mut res = Vec::new();
+    for p in 0..count {
+        res.push((p*space, (p*space)+space));
+    }
+
+    res
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -107,6 +122,12 @@ mod tests {
         let end_p = (0, 0);
         let result_p = generate_path(start_p, end_p);
         assert_eq!(result_p.path_points.len(), 0);
+    }
+    
+    #[test]
+    fn test_interval_calc() {
+        let expected_res = vec![(0, 10), (10, 20), (20, 30)];
+        assert_eq!(spaced_internals(10, 3), expected_res);
     }
 
     #[test]
