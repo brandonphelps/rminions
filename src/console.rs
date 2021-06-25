@@ -11,6 +11,8 @@ use crate::widget::Widget;
 use sdl2::event::{Event};
 use sdl2::keyboard::Keycode;
 
+/// Manages the state of input provided by the user as a collection of strings. 
+/// provides some font handling and drawing to the screen.
 pub struct Console<'ttf, 'a> {
     current_string: String,
     _buffer: Vec<String>,
