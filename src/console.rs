@@ -1,4 +1,5 @@
-use crate::sdl2::rect::Rect;
+use sdl2::rect::Rect;
+
 use sdl2::surface::Surface;
 use sdl2::pixels::Color;
 use sdl2::video::Window;
@@ -10,6 +11,8 @@ use sdl2::ttf::Sdl2TtfContext;
 use crate::widget::Widget;
 use sdl2::event::{Event};
 use sdl2::keyboard::Keycode;
+
+use crate::utils::spaced_internals;
 
 /// Manages the state of input provided by the user as a collection of strings. 
 /// provides some font handling and drawing to the screen.
@@ -95,7 +98,43 @@ impl<'ttf, 'a> DrawableWidget for Console<'ttf, 'a> {
 
         canvas.draw_rect(background_rec).unwrap();
 
+
+
+        let texture_creator = canvas.texture_creator();
+        let mut console_texture = texture_creator.create_texture(None, sdl2::render::TextureAccess::Target, self.console_width, self.console_height).unwrap();
+
+
         
+
+
+
+        canvas.with_texture_canvas(&mut console_texture,
+                                   |user_context| {
+
+                                       // draw the backbuffer.
+                                       user_context.set_draw_color(Color::RGBA(0, 200, 0, 255));
+                                       user_context.fill_rect(Rect::new(0, 0, self.console_width, self.console_height));
+
+                                       let intervals = spaced_internals(30, self.buffer.len() as u32);
+                                       
+                                       for (index, i) in self.buffer.iter().enumerate() {
+                                           println!("{}", i);
+                                           let s = self.font.render(i).blended(Color::RGBA(255,
+                                                                                           0, 0, 255)).map_err(|e| e.to_string()).unwrap();
+                                           println!("{}: s: {}, {}", index, s.width(), s.height());
+                                           let k = texture_creator.create_texture_from_surface(&s).unwrap();
+                                           // let q = k.query();
+                                           let target_widget = i.len() as u32 * self.p_widget;
+                                           
+                                           // println!("{}: Text info: {:#?}, {:#?}", index, q.width, q.height);
+                                           let interva = intervals[index];
+                                           let rec = Rect::new(0, interva.0 as i32,
+                                                               target_widget,
+                                                               30);
+                                           user_context.copy(&k, None, Some(rec)).unwrap();
+                                       }
+                                   }).expect("Failed to draw console backbuffer");
+
         let temp_s = self.get_current_string();
         if temp_s.len() != 0 {
             // important that surface is member variable of
@@ -104,20 +143,6 @@ impl<'ttf, 'a> DrawableWidget for Console<'ttf, 'a> {
             // violated. 
 
 
-            let texture_creator = canvas.texture_creator();
-            let mut console_texture = texture_creator.create_texture(None, sdl2::render::TextureAccess::Target, self.console_width, self.console_height).unwrap();
-
-            canvas.with_texture_canvas(&mut console_texture,
-                                       |user_context| {
-
-                                           user_context.set_draw_color(Color::RGBA(0, 200, 0, 255));
-                                           user_context.fill_rect(Rect::new(0, 0, self.console_width, self.console_height));
-
-                                           let s = self.font.render(&self.get_current_string()).blended(Color::RGBA(255, 0, 0, 255)).map_err(|e| e.to_string()).unwrap();
-                                           
-                                           
-                                           
-                                       });
 
             let target_widget = self.current_string.len() as u32 * self.p_widget;
             let target_rect = sdl2::rect::Rect::new(0, 0, target_widget, 30);

@@ -24,3 +24,4 @@ optional = false
 [dependencies.socketcan]
 socketcan="*"
 optional = true
+
