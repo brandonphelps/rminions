@@ -8,6 +8,8 @@ mod utils;
 mod widget;
 mod console;
 
+use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 use std::path::PathBuf;
 use rlua::Lua;
 use std::collections::HashMap;
@@ -177,8 +179,12 @@ fn main() -> () {
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
+
+    let window_width = 800;
+    let window_height = 600;
+
     let window = video_subsystem
-        .window("Window", 800, 600)
+        .window("Window", window_width, window_height)
         .position_centered()
         .build()
         .unwrap();
@@ -329,6 +335,12 @@ fn main() -> () {
     // hold the app and wait for user to quit.
     'holding_loop: loop {
         canvas.clear();
+
+        let background_rec = Rect::new(0, 0,
+                                       window_width, window_height);
+        canvas.set_draw_color(Color::RGB(124, 99, 151));
+
+        canvas.fill_rect(background_rec).unwrap();
 
         // Draw for current top layer widget.
         match widget_stack.get_mut(0) {

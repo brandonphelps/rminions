@@ -1,3 +1,4 @@
+use crate::sdl2::rect::Rect;
 use sdl2::surface::Surface;
 use sdl2::pixels::Color;
 use sdl2::video::Window;
@@ -19,6 +20,8 @@ pub struct Console<'ttf, 'a> {
 
     // width of the console frame in pixels.
     p_widget: u32,
+    console_width: u32,
+    console_height: u32,
 
 }
 
@@ -30,6 +33,8 @@ impl<'ttf, 'a> Console<'ttf, 'a> {
             surface: None,
             font: ttf_c.load_font(font_path, 128).unwrap(),
             p_widget: 30,
+            console_width: 300,
+            console_height: 400,
         }
     }
 }
@@ -79,6 +84,14 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
 
 impl<'ttf, 'a> DrawableWidget for Console<'ttf, 'a> {
     fn draw(&mut self, canvas: &mut Canvas<Window>, _x: u32, _y: u32) {
+
+        let background_rec = Rect::new(0, 0,
+                                       self.console_width, self.console_height);
+
+        canvas.set_draw_color(Color::RGB(34, 39, 46));
+
+        canvas.draw_rect(background_rec).unwrap();
+
         let temp_s = self.get_current_string();
         if temp_s.len() != 0 {
             // important that surface is member variable of
