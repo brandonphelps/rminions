@@ -15,7 +15,7 @@ use sdl2::keyboard::Keycode;
 /// provides some font handling and drawing to the screen.
 pub struct Console<'ttf, 'a> {
     current_string: String,
-    _buffer: Vec<String>,
+    buffer: Vec<String>,
 
     surface: Option<Surface<'a>>,
     font: Font<'ttf, 'a>,
@@ -31,7 +31,7 @@ impl<'ttf, 'a> Console<'ttf, 'a> {
     pub fn new(font_path: PathBuf, ttf_c: &'ttf Sdl2TtfContext) -> Self {
         Self {
             current_string: String::new(),
-            _buffer: Vec::new(),
+            buffer: Vec::new(),
             surface: None,
             font: ttf_c.load_font(font_path, 128).unwrap(),
             p_widget: 30,
@@ -62,6 +62,7 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
                         self.current_string.pop();
                     }
                     Keycode::KpEnter | Keycode::Return => {
+                        self.buffer.push(self.current_string.clone());
                         self.current_string.clear();
                     },
                     _=> (),
@@ -94,19 +95,39 @@ impl<'ttf, 'a> DrawableWidget for Console<'ttf, 'a> {
 
         canvas.draw_rect(background_rec).unwrap();
 
+        
         let temp_s = self.get_current_string();
         if temp_s.len() != 0 {
             // important that surface is member variable of
             // class, can get segfaults on mac os x platform if not,
             // guessing that there is some lifetime item that is being
             // violated. 
+
+
+            let texture_creator = canvas.texture_creator();
+            let mut console_texture = texture_creator.create_texture(None, sdl2::render::TextureAccess::Target, self.console_width, self.console_height).unwrap();
+
+            canvas.with_texture_canvas(&mut console_texture,
+                                       |user_context| {
+
+                                           user_context.set_draw_color(Color::RGBA(0, 200, 0, 255));
+                                           user_context.fill_rect(Rect::new(0, 0, self.console_width, self.console_height));
+
+                                           let s = self.font.render(&self.get_current_string()).blended(Color::RGBA(255, 0, 0, 255)).map_err(|e| e.to_string()).unwrap();
+                                           
+                                           
+                                           
+                                       });
+
+            let target_widget = self.current_string.len() as u32 * self.p_widget;
+            let target_rect = sdl2::rect::Rect::new(0, 0, target_widget, 30);
+
+            canvas.copy(&console_texture, None, Some(background_rec)).unwrap();
+
             self.surface = Some(self.font.render(&self.get_current_string())
                 .blended(Color::RGBA(255, 0, 0, 255))
                 .map_err(|e| e.to_string()).unwrap());
 
-            let texture_creator = canvas.texture_creator();
-            let target_widget = self.current_string.len() as u32 * self.p_widget;
-            let target_rect = sdl2::rect::Rect::new(0, 0, target_widget, 30);
             match self.surface {
                 Some(ref s) => {
                     let s_texture = texture_creator
