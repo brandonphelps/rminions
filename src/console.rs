@@ -12,7 +12,7 @@ use sdl2::keyboard::Keycode;
 
 pub struct Console<'ttf, 'a> {
     current_string: String,
-    buffer: Vec<String>,
+    _buffer: Vec<String>,
 
     surface: Option<Surface<'a>>,
     font: Font<'ttf, 'a>,
@@ -26,10 +26,10 @@ impl<'ttf, 'a> Console<'ttf, 'a> {
     pub fn new(font_path: PathBuf, ttf_c: &'ttf Sdl2TtfContext) -> Self {
         Self {
             current_string: String::new(),
-            buffer: Vec::new(),
+            _buffer: Vec::new(),
             surface: None,
             font: ttf_c.load_font(font_path, 128).unwrap(),
-            p_widget: 300,
+            p_widget: 30,
         }
     }
 }
@@ -46,8 +46,8 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
     fn update_event(&mut self, event: sdl2::event::Event) {
         match event {
             Event::KeyDown {
-                keycode: Some(T), repeat: false, .. } => {
-                match T {
+                keycode: Some(t), repeat: false, .. } => {
+                match t {
                     Keycode::Space => {
                         self.current_string += " ";
                     },
@@ -59,15 +59,17 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
                     },
                     _=> (),
                 };
-                match T as i32 {
+                match t as i32 {
                     97..=122 => {
-                        self.current_string += &format!("{}", T);
+                        self.current_string += &format!("{}", t);
                     },                        
                     _ => { println!("hello"); },
                 };
                 println!("Current string: {}", self.current_string);
             },
-            Event::KeyUp { keycode: Some(T), repeat: false, .. } => {
+
+            Event::KeyUp { keycode: Some(_t),
+                           repeat: false, .. } => {
                 
             },
             _ => (),
@@ -76,7 +78,7 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
 }
 
 impl<'ttf, 'a> DrawableWidget for Console<'ttf, 'a> {
-    fn draw(&mut self, canvas: &mut Canvas<Window>, x: u32, y: u32) {
+    fn draw(&mut self, canvas: &mut Canvas<Window>, _x: u32, _y: u32) {
         let temp_s = self.get_current_string();
         if temp_s.len() != 0 {
             // important that surface is member variable of
@@ -88,7 +90,8 @@ impl<'ttf, 'a> DrawableWidget for Console<'ttf, 'a> {
                 .map_err(|e| e.to_string()).unwrap());
 
             let texture_creator = canvas.texture_creator();
-            let target_rect = sdl2::rect::Rect::new(0, 0, self.p_widget, 30);
+            let target_widget = self.current_string.len() as u32 * self.p_widget;
+            let target_rect = sdl2::rect::Rect::new(0, 0, target_widget, 30);
             match self.surface {
                 Some(ref s) => {
                     let s_texture = texture_creator

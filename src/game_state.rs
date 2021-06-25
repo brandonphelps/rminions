@@ -593,11 +593,11 @@ fn harvest_system(
 fn movement_system(
     entity: &Entity,
     positions: &mut ComponentManager<Position>,
-    collisions: &mut ComponentManager<Collision>,
+    _collisions: &mut ComponentManager<Collision>,
     new_pos: Position,
 ) {
     // collision movement system.
-    let mut is_colliding = false;
+    let is_colliding = false;
     // for e_collision in collisions.entities.iter() {
     //     // only do collision detection on non myself entities.
     //     // todo: some rust iterator thing for this?

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use sdl2::pixels::Color;
 use sdl2::rect::Point;
 use sdl2::render::{Canvas, Texture, TextureCreator};
@@ -25,22 +27,27 @@ pub fn create_circle_texture<'a>(
     let mut circle_texture = texture_creator
         .create_texture_target(None, ((radius * 2) + 1) as u32, ((radius * 2) + 1) as u32)
         .unwrap();
-    canvas.with_texture_canvas(&mut circle_texture, |canvas_context| {
+    let text = canvas.with_texture_canvas(&mut circle_texture, |canvas_context| {
         canvas_context.set_draw_color(Color::RGB(255, 0, 0));
-
         for point in shifted_points.iter() {
             canvas_context
                 .draw_point(Point::new(point.0, point.1))
                 .unwrap();
         }
     });
+
+    match text {
+        Ok(_r) => (),
+        Err(r) => { println!("create circle texture error!: {}", r); }
+    };
+    
     return Ok(circle_texture);
 }
 
 /// @brief generates a list of 2d points, where a line should be drawn to fill in a circle.
 /// format (x1, y1, x2, y2)
-fn generate_circle_lines(radius: i32) -> Vec<(i32, i32, i32, i32)> {
-    let mut points = Vec::new();
+fn generate_circle_lines(_radius: i32) -> Vec<(i32, i32, i32, i32)> {
+    let points = Vec::new();
 
     return points;
 }
@@ -50,8 +57,7 @@ fn generate_circle_points(radius: i32) -> Vec<(i32, i32)> {
     let mut col = radius;
     // why is this 90? if this was octects wouldn't it be 45?
     let degrees: f64 = 0.90;
-    let mut num_to_go = degrees.sin() * radius as f64;
-    println!("Num to go: {}", num_to_go);
+    let num_to_go = degrees.sin() * radius as f64;
     for row in 0..num_to_go.round() as i32 {
         let x = radius_error(col - 1, row + 1, radius);
         let x_o = radius_error(col, row + 1, radius);

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod circles;
 mod collision;
 mod entity_manager;
@@ -6,9 +8,7 @@ mod utils;
 mod widget;
 mod console;
 
-use std::ops::Deref;
 use std::path::PathBuf;
-use std::borrow::BorrowMut;
 use rlua::Lua;
 use std::collections::HashMap;
 use std::io;
@@ -56,7 +56,7 @@ fn generate_pathing_program(path: &Path) -> Vec<Command> {
 }
 
 fn program_harvest_unit(
-    entity: &Entity,
+    _entity: &Entity,
     target_entity: &Entity,
     target_pos: &Position,
 ) -> Vec<Command> {
@@ -158,7 +158,7 @@ end
             let p = lua_ctx.load(&line.unwrap()).exec();
 
             match p {
-                Ok(r) => (),
+                Ok(_r) => (),
                 Err(r) => {
                     println!("{}", r)
                 }
@@ -191,21 +191,21 @@ fn main() -> () {
         .unwrap();
     canvas.clear();
 
-    let mut current_state = game_state::game_load();
-    let mut game_input = game_state::GameInput::default();
+    let _current_state = game_state::game_load();
+    let _game_input = game_state::GameInput::default();
 
     let frame_per_second_target = 60;
-    let milliseconds_per_frame = 1000.0 / frame_per_second_target as f32;
+    let _milliseconds_per_frame = 1000.0 / frame_per_second_target as f32;
 
     // each programed unit gets a target
     // first entity is the actor, second is the "target"
     // let mut programed_units = Vec::<(Entity, Entity)>::new();
-    let mut programmed_units = HashMap::<Entity, Entity>::new();
+    let _programmed_units = HashMap::<Entity, Entity>::new();
 
-    let mut frame = 0;
-    let max_frame = 20000;
+    let _frame = 0;
+    let _max_frame = 20000;
 
-    let mut current_target_entity: Option<Entity> = None;
+    let _current_target_entity: Option<Entity> = None;
 
     // 'running: while frame < max_frame {
     //     for event in event_pump.poll_iter() {
@@ -321,8 +321,9 @@ fn main() -> () {
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
-    let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context));
+
     let mut widget_stack = Vec::<Box<dyn widget::DrawableWidget>>::new();
+    let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context));
     widget_stack.push(temp);
 
     // hold the app and wait for user to quit.
@@ -332,7 +333,6 @@ fn main() -> () {
         // Draw for current top layer widget.
         match widget_stack.get_mut(0) {
             Some(ref mut widget) => {
-                println!("got a widget");
                 widget.draw(&mut canvas, 0, 0);
                 canvas.present();
             },
@@ -356,19 +356,26 @@ fn main() -> () {
                 } => break 'holding_loop,
                 Event::KeyUp {
                     timestamp,
-                    window_id,
+                    window_id: _,
                     keycode,
-                    scancode,
+                    scancode: _,
                     keymod,
                     repeat,
                 } => {
                     println!("Up timestamp: {}, repeat: {}, keycode: {}, keymode: {}", timestamp, repeat, keycode.unwrap(), keymod);
+
+                    match keycode {
+                        Some(Keycode::Backquote) => {
+                            
+                        },
+                        _ => (),
+                    };
                 },
                 Event::KeyDown {
                     timestamp,
-                    window_id,
+                    window_id: _,
                     keycode,
-                    scancode,
+                    scancode: _,
                     keymod,
                     repeat,
                 } => {
