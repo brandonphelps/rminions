@@ -16,7 +16,7 @@ use crate::utils::spaced_internals;
 
 /// Manages the state of input provided by the user as a collection of strings.
 /// provides some font handling and drawing to the screen.
-pub struct Console<'ttf, 'a> {
+pub struct Console<'ttf, 'a, 'callback> {
     current_string: String,
     buffer: Vec<String>,
 
@@ -32,10 +32,18 @@ pub struct Console<'ttf, 'a> {
     console_width: u32,
     // height of the console frame in pixels.
     console_height: u32,
+
+    // need some sort of callback hook for when event should occur. 
+    /// callback function if defined 
+    enter_callback: &'callback dyn Fn(String) -> (),
 }
 
-impl<'ttf, 'a> Console<'ttf, 'a> {
-    pub fn new(font_path: PathBuf, ttf_c: &'ttf Sdl2TtfContext) -> Self {
+impl<'ttf, 'a, 'callback> Console<'ttf, 'a, 'callback> {
+    pub fn new(font_path: PathBuf,
+               ttf_c: &'ttf Sdl2TtfContext,
+               enter_callback: &'callback dyn Fn(String) -> ()) -> Self {
+
+
         Self {
             current_string: String::new(),
             buffer: Vec::new(),
@@ -45,11 +53,12 @@ impl<'ttf, 'a> Console<'ttf, 'a> {
             char_height: 30,
             console_width: 300,
             console_height: 400,
+            enter_callback: enter_callback,
         }
     }
 }
 
-impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
+impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
     fn get_current_string(&self) -> String {
         self.current_string.clone()
     }
@@ -59,6 +68,7 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
     }
 
     fn update_event(&mut self, event: sdl2::event::Event) {
+        let mut handled_string = None;
         match event {
             Event::KeyDown {
                 keycode: Some(t),
@@ -74,16 +84,18 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
                     }
                     Keycode::KpEnter | Keycode::Return => {
                         self.buffer.push(self.current_string.clone());
+                        handled_string = Some(self.current_string.clone());
                         self.current_string.clear();
                     }
                     _ => (),
                 };
                 match t as i32 {
+                    // a-z
                     97..=122 => {
                         self.current_string += &format!("{}", t);
                     }
                     _ => {
-                        println!("hello");
+                        // println!("hello");
                     }
                 };
             }
@@ -94,11 +106,18 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
                 ..
             } => {}
             _ => (),
+        };
+
+        match handled_string {
+            Some(t) => {
+                (self.enter_callback)(t)
+            },
+            None => ()
         }
     }
 }
 
-impl<'ttf, 'a> DrawableWidget for Console<'ttf, 'a> {
+impl<'ttf, 'a, 'callback> DrawableWidget for Console<'ttf, 'a, 'callback> {
     fn draw(&mut self, canvas: &mut Canvas<Window>, _x: u32, _y: u32) {
         let background_rec = Rect::new(0, 0, self.console_width, self.console_height);
 

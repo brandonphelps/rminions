@@ -327,8 +327,12 @@ fn main() -> () {
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
 
+    fn hello(s: String) {
+        println!("hello: {}", s);
+    }
+
     let mut widget_stack = Vec::<Box<dyn widget::DrawableWidget>>::new();
-    let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context));
+    let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context, &hello));
     widget_stack.push(temp);
 
     // hold the app and wait for user to quit.
