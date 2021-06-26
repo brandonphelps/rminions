@@ -323,6 +323,13 @@ fn main() -> () {
     // w/e widget has focus is the current "top" widget.
     // widget_stack.push(Box::new(Console::new()));
 
+    let lua = Lua::new();
+    lua.context(|lua_ctx| {
+        let globals = lua_ctx.globals();
+        globals.set("string_var", "hello").expect("failed to set global var");
+    });
+
+
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
