@@ -12,7 +12,6 @@ use sdl2::ttf::Sdl2TtfContext;
 use sdl2::video::Window;
 use std::path::PathBuf;
 
-use crate::utils::spaced_internals;
 
 /// Manages the state of input provided by the user as a collection of strings.
 /// provides some font handling and drawing to the screen.
@@ -55,6 +54,11 @@ impl<'ttf, 'a, 'callback> Console<'ttf, 'a, 'callback> {
             console_height: 400,
             enter_callback: enter_callback,
         }
+    }
+
+    /// inserts an entry into the back buffer for rendering. 
+    pub fn insert_text(&mut self, value: String)  {
+        todo!()
     }
 }
 
@@ -138,7 +142,7 @@ impl<'ttf, 'a, 'callback> DrawableWidget for Console<'ttf, 'a, 'callback> {
             .with_texture_canvas(&mut console_texture, |user_context| {
                 // draw the backbuffer.
                 user_context.set_draw_color(Color::RGBA(0, 200, 0, 255));
-                user_context.fill_rect(Rect::new(0, 0, self.console_width, self.console_height));
+                user_context.fill_rect(Rect::new(0, 0, self.console_width, self.console_height)).expect("Failed to draw background for console");
 
                 for (index, i) in self.buffer.iter().enumerate() {
                     let s = self

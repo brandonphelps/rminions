@@ -8,6 +8,7 @@ mod game_state;
 mod utils;
 mod widget;
 
+use rlua::Context;
 use rlua::UserDataMethods;
 use rlua::UserData;
 use rlua::MetaMethod;
@@ -118,7 +119,7 @@ fn lua_entry() -> rlua::Result<()> {
             )?;
 
             lua_ctx.load("sketchy()").exec()
-        });
+        }).expect("Failed lua handling");
         println!("rust val: {}", rust_val);
         Ok(())
     })?;
@@ -252,7 +253,6 @@ end
             let p = lua_ctx.load("add_unit(1.0, 2.3)").exec();
 
             
-            let mut strings: Vec<String> = Vec::new();
             let stdin = io::stdin();
             for line in stdin.lock().lines() {
                 let val = line.unwrap();
@@ -268,7 +268,7 @@ end
                 }
             }
             p
-        });
+        }).expect("failed lua handling");
 
         add_unit(&mut units, 2.0, 2.13);
 
@@ -444,12 +444,25 @@ fn main() -> () {
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
 
-    fn hello(s: String) {
-        println!("hello: {}", s);
+    fn hello(lua: &Lua, s: String) {
+        lua.context(|lua_ctx| {
+            let g = lua_ctx.globals();
+            g.set("hello", s);
+        });
+
+        lua.context(|lua_ctx| {
+            let g = lua_ctx.globals();
+            println!("Value of hello: {}", g.get::<_, String>("hello").unwrap());
+
+            
+
+        });
     }
 
+    let temp = |value| { hello(&lua, value) };
+
     let mut widget_stack = Vec::<Box<dyn widget::DrawableWidget>>::new();
-    let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context, &hello));
+    let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context, &temp));
     widget_stack.push(temp);
 
     // hold the app and wait for user to quit.
