@@ -105,12 +105,11 @@ pub fn generate_path(start_pos: (u32, u32), end_pos: (u32, u32)) -> Path {
 pub fn spaced_internals(space: u32, count: u32) -> Vec<(u32, u32)> {
     let mut res = Vec::new();
     for p in 0..count {
-        res.push((p*space, (p*space)+space));
+        res.push((p * space, (p * space) + space));
     }
 
     res
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -123,7 +122,7 @@ mod tests {
         let result_p = generate_path(start_p, end_p);
         assert_eq!(result_p.path_points.len(), 0);
     }
-    
+
     #[test]
     fn test_interval_calc() {
         let expected_res = vec![(0, 10), (10, 20), (20, 30)];

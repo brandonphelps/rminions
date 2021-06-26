@@ -38,9 +38,11 @@ pub fn create_circle_texture<'a>(
 
     match text {
         Ok(_r) => (),
-        Err(r) => { println!("create circle texture error!: {}", r); }
+        Err(r) => {
+            println!("create circle texture error!: {}", r);
+        }
     };
-    
+
     return Ok(circle_texture);
 }
 

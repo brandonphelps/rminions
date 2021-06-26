@@ -2,19 +2,19 @@
 
 mod circles;
 mod collision;
+mod console;
 mod entity_manager;
 mod game_state;
 mod utils;
 mod widget;
-mod console;
 
+use rlua::Lua;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use std::path::PathBuf;
-use rlua::Lua;
 use std::collections::HashMap;
 use std::io;
 use std::io::BufRead;
+use std::path::PathBuf;
 
 use sdl2;
 use sdl2::event::Event;
@@ -320,9 +320,8 @@ fn main() -> () {
     // need to then pass the event to w/e item has current focuse
     // then each item has a sort of "back out" option.
 
-    // w/e widget has focus is the current "top" widget. 
+    // w/e widget has focus is the current "top" widget.
     // widget_stack.push(Box::new(Console::new()));
-
 
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -336,8 +335,7 @@ fn main() -> () {
     'holding_loop: loop {
         canvas.clear();
 
-        let background_rec = Rect::new(0, 0,
-                                       window_width, window_height);
+        let background_rec = Rect::new(0, 0, window_width, window_height);
         canvas.set_draw_color(Color::RGB(124, 99, 151));
 
         canvas.fill_rect(background_rec).unwrap();
@@ -347,7 +345,7 @@ fn main() -> () {
             Some(ref mut widget) => {
                 widget.draw(&mut canvas, 0, 0);
                 canvas.present();
-            },
+            }
             None => (),
         }
 
@@ -356,7 +354,7 @@ fn main() -> () {
             match widget_stack.get_mut(0) {
                 Some(ref mut widget) => {
                     widget.update_event(event.clone());
-                },
+                }
                 None => (),
             }
 
@@ -374,15 +372,21 @@ fn main() -> () {
                     keymod,
                     repeat,
                 } => {
-                    println!("Up timestamp: {}, repeat: {}, keycode: {}, keymode: {}", timestamp, repeat, keycode.unwrap(), keymod);
+                    println!(
+                        "Up timestamp: {}, repeat: {}, keycode: {}, keymode: {}",
+                        timestamp,
+                        repeat,
+                        keycode.unwrap(),
+                        keymod
+                    );
 
                     match keycode {
                         Some(Keycode::Backquote) => {
                             // todo: display / push the console onto the stack.
-                        },
+                        }
                         _ => (),
                     };
-                },
+                }
                 Event::KeyDown {
                     timestamp,
                     window_id: _,
@@ -391,16 +395,20 @@ fn main() -> () {
                     keymod,
                     repeat,
                 } => {
-                    println!("Down timestamp: {}, repeat: {}, keycode: {}, keymode: {}", timestamp, repeat, keycode.unwrap(), keymod);
+                    println!(
+                        "Down timestamp: {}, repeat: {}, keycode: {}, keymode: {}",
+                        timestamp,
+                        repeat,
+                        keycode.unwrap(),
+                        keymod
+                    );
                     match keycode {
                         Some(Keycode::Space) => {
                             canvas.clear();
-                        },
+                        }
                         _ => (),
                     }
-
-                },
-
+                }
 
                 Event::MultiGesture { .. } => {
                     println!("Got a multigesture");

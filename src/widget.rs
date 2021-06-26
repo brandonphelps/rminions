@@ -1,7 +1,6 @@
-
-use sdl2::video::Window;
-use sdl2::render::Canvas;
 use sdl2::event::Event;
+use sdl2::render::Canvas;
+use sdl2::video::Window;
 
 pub trait Widget {
     fn update_event(&mut self, event: Event);
@@ -14,6 +13,3 @@ pub trait Widget {
 pub trait DrawableWidget: Widget {
     fn draw(&mut self, canvas: &mut Canvas<Window>, x: u32, y: u32);
 }
-
-
-
