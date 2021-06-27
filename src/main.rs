@@ -8,6 +8,7 @@ mod game_state;
 mod utils;
 mod widget;
 
+use std::cell::RefCell;
 use rlua::UserDataMethods;
 use rlua::UserData;
 use rlua::MetaMethod;
@@ -453,17 +454,18 @@ fn main() -> () {
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
 
-
-    fn hello(lua: &Lua, s: String) {
+    fn hello(lua: &Lua, s: String) -> Option<String> {
+        let mut res = None;
         lua.context(|lua_ctx| {
-            let g = lua_ctx.globals();
+            let _g = lua_ctx.globals();
             println!("Setting hello to: {}", s);
             // g.set("hello", s).unwrap();
 
-            let p = lua_ctx.load(&s).exec();
+            let p = lua_ctx.load(&s).eval::<String>();
             match p {
                 Ok(r) => {
                     println!("{:#?}", r);
+                    res = Some(r);
                 },
                 Err(r) => {
                     println!("{}", r);
@@ -472,12 +474,11 @@ fn main() -> () {
         });
 
         lua.context(|lua_ctx| {
-            let g = lua_ctx.globals();
+            let _g = lua_ctx.globals();
             //println!("Value of hello: {}", g.get::<_, String>("hello").unwrap());
         });
+        res
     }
-
-
 
     let temp = |value| { hello(&lua, value) };
 

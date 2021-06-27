@@ -79,13 +79,13 @@ pub struct Console<'ttf, 'a, 'callback> {
 
     // need some sort of callback hook for when event should occur. 
     /// callback function if defined 
-    enter_callback: &'callback dyn Fn(String) -> (),
+    enter_callback: &'callback dyn Fn(String) -> Option<String>,
 }
 
 impl<'ttf, 'a, 'callback> Console<'ttf, 'a, 'callback> {
     pub fn new(font_path: PathBuf,
                ttf_c: &'ttf Sdl2TtfContext,
-               enter_callback: &'callback dyn Fn(String) -> ()) -> Self {
+               enter_callback: &'callback dyn Fn(String) -> Option<String>) -> Self {
 
 
         Self {
@@ -155,7 +155,11 @@ impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
 
         match handled_string {
             Some(t) => {
-                (self.enter_callback)(t)
+                let res = (self.enter_callback)(t);
+                match res {
+                    Some(s) => self.buffer.push(s),
+                    None => (),
+                }
             },
             None => ()
         }
@@ -300,6 +304,55 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                                 Some('e')
                             }
                         },
+                        Keycode::F => {
+                            if is_upper {
+                                Some('F')
+                            } else {
+                                Some('f')
+                            }
+                        },
+                        Keycode::J => {
+                            if is_upper {
+                                Some('J')
+                            } else {
+                                Some('j')
+                            }
+                        },
+                        Keycode::H => {
+                            if is_upper {
+                                Some('H')
+                            } else {
+                                Some('h')
+                            }
+                        },
+                        Keycode::K => {
+                            if is_upper {
+                                Some('K')
+                            } else {
+                                Some('k')
+                            }
+                        },
+                        Keycode::L => {
+                            if is_upper {
+                                Some('L')
+                            } else {
+                                Some('l')
+                            }
+                        },
+                        Keycode::S => {
+                            if is_upper {
+                                Some('S')
+                            } else {
+                                Some('s')
+                            }
+                        },
+                        Keycode::Comma => {
+                            if is_upper {
+                                Some('<')
+                            } else {
+                                Some(',')
+                            }
+                        },
                         Keycode::Num0 => {
                             if is_upper {
                                 Some(')')
@@ -370,7 +423,7 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                                 Some('9')
                             }
                         },
-
+                        Keycode::Return => None,
                         Keycode::LShift => None,
                         Keycode::Escape => None,
                         Keycode::RShift => None,
