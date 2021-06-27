@@ -93,10 +93,10 @@ impl<'ttf, 'a, 'callback> Console<'ttf, 'a, 'callback> {
             buffer: Vec::new(),
             surface: None,
             font: ttf_c.load_font(font_path, 128).unwrap(),
-            p_widget: 30,
-            char_height: 30,
-            console_width: 300,
-            console_height: 400,
+            p_widget: 20,
+            char_height: 20,
+            console_width: 700,
+            console_height: 600,
             enter_callback: enter_callback,
         }
     }
@@ -222,7 +222,9 @@ impl<'ttf, 'a, 'callback> DrawableWidget for Console<'ttf, 'a, 'callback> {
             // violated.
 
             let target_widget = self.current_string.len() as u32 * self.p_widget;
-            let target_rect = sdl2::rect::Rect::new(0, 0, target_widget, 30);
+            let target_rect = sdl2::rect::Rect::new(0,
+                                                    (self.console_height - self.p_widget) as i32,
+                                                    target_widget, self.p_widget);
 
             self.surface = Some(
                 self.font
@@ -311,18 +313,25 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                                 Some('f')
                             }
                         },
-                        Keycode::J => {
-                            if is_upper {
-                                Some('J')
-                            } else {
-                                Some('j')
-                            }
-                        },
                         Keycode::H => {
                             if is_upper {
                                 Some('H')
                             } else {
                                 Some('h')
+                            }
+                        },
+                        Keycode::I => {
+                            if is_upper {
+                                Some('I')
+                            } else {
+                                Some('i')
+                            }
+                        },
+                        Keycode::J => {
+                            if is_upper {
+                                Some('J')
+                            } else {
+                                Some('j')
                             }
                         },
                         Keycode::K => {
@@ -339,6 +348,13 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                                 Some('l')
                             }
                         },
+                        Keycode::O => {
+                            if is_upper {
+                                Some('O')
+                            } else {
+                                Some('o')
+                            }
+                        },
                         Keycode::S => {
                             if is_upper {
                                 Some('S')
@@ -346,11 +362,67 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                                 Some('s')
                             }
                         },
+                        Keycode::P => {
+                            if is_upper {
+                                Some('P')
+                            } else {
+                                Some('p')
+                            }
+                        },
+                        Keycode::T => {
+                            if is_upper {
+                                Some('T')
+                            } else {
+                                Some('t')
+                            }
+                        },
+                        Keycode::R => {
+                            if is_upper {
+                                Some('R')
+                            } else {
+                                Some('r')
+                            }
+                        },
+                        Keycode::W => {
+                            if is_upper {
+                                Some('W')
+                            } else {
+                                Some('w')
+                            }
+                        },
+                        Keycode::N => {
+                            if is_upper {
+                                Some('N')
+                            } else {
+                                Some('n')
+                            }
+                        },
+                        Keycode::U => {
+                            if is_upper {
+                                Some('U')
+                            } else {
+                                Some('u')
+                            }
+                        },
+                        Keycode::Q => {
+                            if is_upper {
+                                Some('Q')
+                            } else {
+                                Some('q')
+                            }
+                        },
                         Keycode::Comma => {
                             if is_upper {
                                 Some('<')
                             } else {
                                 Some(',')
+                            }
+                        },
+                        Keycode::Quote => {
+                            if is_upper {
+                                Some('"')
+                            } else {
+                                Some('\'')
                             }
                         },
                         Keycode::Num0 => {
@@ -423,6 +495,27 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                                 Some('9')
                             }
                         },
+                        Keycode::Equals => {
+                            if is_upper {
+                                Some('+')
+                            } else {
+                                Some('=')
+                            }
+                        },
+                        Keycode::Minus => {
+                            if is_upper {
+                                Some('_')
+                            } else {
+                                Some('-')
+                            }
+                        },
+                        Keycode::Space => {
+                            Some(' ')
+                        },
+                        Keycode::Backspace => None,
+                        Keycode::Tab => None,
+                        Keycode::LAlt => None,
+                        Keycode::RAlt => None,
                         Keycode::Return => None,
                         Keycode::LShift => None,
                         Keycode::Escape => None,

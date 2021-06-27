@@ -8,9 +8,9 @@ mod game_state;
 mod utils;
 mod widget;
 
-use std::cell::RefCell;
 use rlua::UserDataMethods;
 use rlua::UserData;
+use rlua::Error;
 use rlua::MetaMethod;
 use std::io::BufRead;
 
@@ -458,9 +458,6 @@ fn main() -> () {
         let mut res = None;
         lua.context(|lua_ctx| {
             let _g = lua_ctx.globals();
-            println!("Setting hello to: {}", s);
-            // g.set("hello", s).unwrap();
-
             let p = lua_ctx.load(&s).eval::<String>();
             match p {
                 Ok(r) => {
@@ -468,7 +465,15 @@ fn main() -> () {
                     res = Some(r);
                 },
                 Err(r) => {
-                    println!("{}", r);
+                    res = match r {
+                        Error::SyntaxError { message, incomplete_input }  => {
+                            Some(format!("Syntax error: {} {}", incomplete_input, message))
+                        },
+                        Error::FromLuaConversionError { .. } => {
+                            Some("nil".into())
+                        },
+                        _ => { Some(format!("unknown error: {}", r.to_string())) }
+                    }
                 }
             };
         });
