@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use sdl2::rect::Rect;
 
+use sdl2::keyboard::Mod;
+
 use crate::widget::DrawableWidget;
 use crate::widget::Widget;
 use sdl2::event::Event;
@@ -122,13 +124,15 @@ impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
                 repeat: false,
                 ..
             } => {
+                // character input. 
+                let charac = get_character_from_event(&event);
+                match charac {
+                    Some(c) => self.current_string.push(c),
+                    None => ()
+                };
+
+                // control handling. 
                 match t {
-                    Keycode::Plus => {
-                        self.current_string += "+";
-                    },
-                    Keycode::Space => {
-                        self.current_string += " ";
-                    }
                     Keycode::Backspace => {
                         self.current_string.pop();
                     }
@@ -138,21 +142,6 @@ impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
                         self.current_string.clear();
                     }
                     _ => (),
-                };
-                match t as i32 {
-                    27 => {
-                        self.current_string += "+";
-                    },
-                    48..=57 => {
-                        self.current_string += &format!("{}", t);
-                    },
-                    // a-z
-                    97..=122 => {
-                        self.current_string += &format!("{}", t);
-                    }
-                    _ => {
-                        println!("Value: {}", t as i32);
-                    }
                 };
             }
 
@@ -254,11 +243,149 @@ impl<'ttf, 'a, 'callback> DrawableWidget for Console<'ttf, 'a, 'callback> {
     }
 }
 
+/// Returns the correponding keyboard char for the provided
+/// event.
+/// If the event is not a representable character, (i.e mouse event).
+/// Then None is returned. 
+fn get_character_from_event(event: &Event) -> Option<char> {
+    match event {
+        Event::KeyDown { keycode, keymod, .. } | Event::KeyUp { keycode, keymod, .. } => {
 
+            let p = *keymod;
+            let is_upper = if (p & Mod::LSHIFTMOD) == Mod::LSHIFTMOD
+                || (p & Mod::RSHIFTMOD) == Mod::RSHIFTMOD
+                || (p & Mod::CAPSMOD) == Mod::CAPSMOD
+            {
+                true
+            } else {
+                false
+            };
+            
+            match keycode { 
+                Some(key) => {
+                    match key {
+                        Keycode::A => {
+                            if is_upper {
+                                Some('A')
+                            } else {
+                                println!("{:#?}", event);
+                                Some('a')
+                            }
+                        },
+                        Keycode::B => {
+                            if is_upper {
+                                Some('B')
+                            } else {
+                                Some('b')
+                            }
+                        },
+                        Keycode::C => {
+                            if is_upper {
+                                Some('C')
+                            } else {
+                                Some('c')
+                            }
+                        },
+                        Keycode::D => {
+                            if is_upper {
+                                Some('D')
+                            } else {
+                                Some('d')
+                            }
+                        },
+                        Keycode::E => {
+                            if is_upper {
+                                Some('E')
+                            } else {
+                                Some('e')
+                            }
+                        },
+                        Keycode::Num0 => {
+                            if is_upper {
+                                Some(')')
+                            } else {
+                                Some('0')
+                            }
+                        },
+                        Keycode::Num1 => {
+                            if is_upper {
+                                Some('!')
+                            } else {
+                                Some('1')
+                            }
+                        },
+                        Keycode::Num2 => {
+                            if is_upper {
+                                Some('@')
+                            } else {
+                                Some('2')
+                            }
+                        },
+                        Keycode::Num3 => {
+                            if is_upper {
+                                Some('#')
+                            } else {
+                                Some('3')
+                            }
+                        },
+                        Keycode::Num4 => {
+                            if is_upper {
+                                Some('$')
+                            } else {
+                                Some('4')
+                            }
+                        },
+                        Keycode::Num5 => {
+                            if is_upper {
+                                Some('%')
+                            } else {
+                                Some('5')
+                            }
+                        },
+                        Keycode::Num6 => {
+                            if is_upper {
+                                Some('^')
+                            } else {
+                                Some('6')
+                            }
+                        },
+                        Keycode::Num7 => {
+                            if is_upper {
+                                Some('&')
+                            } else {
+                                Some('7')
+                            }
+                        },
+                        Keycode::Num8 => {
+                            if is_upper {
+                                Some('*')
+                            } else {
+                                Some('8')
+                            }
+                        },
+                        Keycode::Num9 => {
+                            if is_upper {
+                                Some('(')
+                            } else {
+                                Some('9')
+                            }
+                        },
+
+                        Keycode::LShift => None,
+                        Keycode::Escape => None,
+                        Keycode::RShift => None,
+                        _ => { todo!("haven't imple {:#?}", keycode) } 
+                    }
+                },
+                None => None
+            }
+        },
+        _ => None
+    }
+}
 
 #[cfg(test)]
 mod tests {
-    use sdl2::event::EventType::KeyUp;
     use super::*;
 
     #[test]
@@ -266,7 +393,36 @@ mod tests {
         let mut keyboard_s = KeyboardState::new();
 
         keyboard_s.update(Event::KeyUp {
-            
+            timestamp: 0,
+            window_id: 1,
+            keycode: Some(Keycode::KpEnter),
+            scancode: None,
+            keymod: sdl2::keyboard::Mod::NOMOD,
+            repeat: false,
             });
+    }
+
+    #[test]
+    fn test_keyboard_char() {
+        let event = Event::KeyUp {
+            timestamp: 0,
+            window_id: 1,
+            keycode: Some(Keycode::P),
+            scancode: None,
+            keymod: sdl2::keyboard::Mod::NOMOD,
+            repeat: false,
+            };        
+        
+        assert_eq!(get_character_from_event(&event), 'p');
+
+        let event2 = Event::KeyUp {
+            timestamp: 0,
+            window_id: 1,
+            keycode: Some(Keycode::P),
+            scancode: None,
+            keymod: sdl2::keyboard::Mod::LSHIFTMOD,
+            repeat: false,
+            };        
+        assert_eq!(get_character_from_event(&event), 'P');
     }
 }
