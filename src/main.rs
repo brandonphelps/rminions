@@ -458,11 +458,24 @@ fn main() -> () {
         let mut res = None;
         lua.context(|lua_ctx| {
             let _g = lua_ctx.globals();
-            let p = lua_ctx.load(&s).eval::<String>();
+            let p = lua_ctx.load(&s).eval::<rlua::MultiValue>();
             match p {
                 Ok(r) => {
+                    println!("{}", r.iter().map(|value| format!("{:?}", value)).collect::<Vec<_>>().join("\t"));
+
                     println!("{:#?}", r);
-                    res = Some(r);
+                    for j in r.iter() {
+                        match *j {
+                            rlua::Value::Nil => {
+                                res = Some("nil".into())
+                            },
+                            _ => {
+                                res = Some("to string undefined for".into());
+                            }
+                        }
+                    }
+
+                    res = Some("hello".into());
                 },
                 Err(r) => {
                     res = match r {
@@ -532,14 +545,6 @@ fn main() -> () {
                     keymod,
                     repeat,
                 } => {
-                    println!(
-                        "Up timestamp: {}, repeat: {}, keycode: {}, keymode: {}",
-                        timestamp,
-                        repeat,
-                        keycode.unwrap(),
-                        keymod
-                    );
-
                     match keycode {
                         Some(Keycode::Backquote) => {
                             // todo: display / push the console onto the stack.
@@ -555,13 +560,6 @@ fn main() -> () {
                     keymod,
                     repeat,
                 } => {
-                    println!(
-                        "Down timestamp: {}, repeat: {}, keycode: {}, keymode: {}",
-                        timestamp,
-                        repeat,
-                        keycode.unwrap(),
-                        keymod
-                    );
                     match keycode {
                         Some(Keycode::Space) => {
                             canvas.clear();
