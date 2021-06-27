@@ -453,7 +453,7 @@ fn main() -> () {
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
-
+    
     fn hello(lua: &Lua, s: String) -> Option<String> {
         let mut res = None;
         lua.context(|lua_ctx| {
@@ -461,7 +461,9 @@ fn main() -> () {
             let p = lua_ctx.load(&s).eval::<rlua::MultiValue>();
             match p {
                 Ok(r) => {
-                    println!("{}", r.iter().map(|value| format!("{:?}", value)).collect::<Vec<_>>().join("\t"));
+                    println!("{}",
+                             r.iter().map(|value|
+                                          format!("{:?}", value)).collect::<Vec<_>>().join("\t"));
 
                     println!("{:#?}", r);
                     for j in r.iter() {
@@ -469,13 +471,17 @@ fn main() -> () {
                             rlua::Value::Nil => {
                                 res = Some("nil".into())
                             },
+                            rlua::Value::Boolean(t) => {
+                                res = Some(format!("{}", t))
+                            },
+                            rlua::Value::Integer(t) => {
+                                res = Some(format!("{}", t))
+                            },
                             _ => {
                                 res = Some("to string undefined for".into());
                             }
                         }
                     }
-
-                    res = Some("hello".into());
                 },
                 Err(r) => {
                     res = match r {

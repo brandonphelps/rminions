@@ -190,6 +190,9 @@ impl<'ttf, 'a, 'callback> DrawableWidget for Console<'ttf, 'a, 'callback> {
                 user_context.fill_rect(Rect::new(0, 0, self.console_width, self.console_height)).expect("Failed to draw background for console");
 
                 for (index, i) in self.buffer.iter().enumerate() {
+                    if i.len() == 0 {
+                        continue
+                    }
                     let s = self
                         .font
                         .render(i)
