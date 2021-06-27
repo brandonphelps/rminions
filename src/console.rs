@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use sdl2::rect::Rect;
 
 use crate::widget::DrawableWidget;
@@ -12,6 +13,48 @@ use sdl2::ttf::Sdl2TtfContext;
 use sdl2::video::Window;
 use std::path::PathBuf;
 
+
+/// manages the state of keyboard input allowing for checking if
+/// a key is still pressed down while another key event occurs.
+/// all values are initially false.
+pub struct KeyboardState {
+    pressed_down_keys: HashMap<Keycode, bool>,
+}
+
+impl KeyboardState {
+    pub fn new() -> Self {
+        Self {
+            pressed_down_keys: HashMap::new()
+        }
+    }
+
+    /// only accepts KeyUp and KeyDown events, all other events
+    /// are ignored and do not do anything
+    pub fn update(&mut self, event: Event) {
+
+        // key, is_down, repeat
+        let info = match event {
+            Event::KeyUp { keycode, repeat, .. } => {
+                (keycode.unwrap(), false, repeat)
+            },
+            Event::KeyDown { keycode, repeat, .. } => {
+                (keycode.unwrap(), true, repeat)                
+            },
+            _ => {
+                return;
+            }
+        };
+
+        self.pressed_down_keys.insert(info.0, info.1);
+    }
+
+    pub fn is_down(&self, key: Keycode) -> bool {
+        match self.pressed_down_keys.get(&key) {
+            Some(k) => { *k },
+            None => { false },
+        }
+    }
+}
 
 /// Manages the state of input provided by the user as a collection of strings.
 /// provides some font handling and drawing to the screen.
@@ -57,7 +100,7 @@ impl<'ttf, 'a, 'callback> Console<'ttf, 'a, 'callback> {
     }
 
     /// inserts an entry into the back buffer for rendering. 
-    pub fn insert_text(&mut self, value: String)  {
+    pub fn insert_text(&mut self, _value: String)  {
         todo!()
     }
 }
@@ -80,6 +123,9 @@ impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
                 ..
             } => {
                 match t {
+                    Keycode::Plus => {
+                        self.current_string += "+";
+                    },
                     Keycode::Space => {
                         self.current_string += " ";
                     }
@@ -94,12 +140,18 @@ impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
                     _ => (),
                 };
                 match t as i32 {
+                    27 => {
+                        self.current_string += "+";
+                    },
+                    48..=57 => {
+                        self.current_string += &format!("{}", t);
+                    },
                     // a-z
                     97..=122 => {
                         self.current_string += &format!("{}", t);
                     }
                     _ => {
-                        // println!("hello");
+                        println!("Value: {}", t as i32);
                     }
                 };
             }
@@ -199,5 +251,22 @@ impl<'ttf, 'a, 'callback> DrawableWidget for Console<'ttf, 'a, 'callback> {
                 None => (),
             }
         }
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use sdl2::event::EventType::KeyUp;
+    use super::*;
+
+    #[test]
+    fn test_keyboard_state() {
+        let mut keyboard_s = KeyboardState::new();
+
+        keyboard_s.update(Event::KeyUp {
+            
+            });
     }
 }

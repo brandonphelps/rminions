@@ -8,7 +8,6 @@ mod game_state;
 mod utils;
 mod widget;
 
-use rlua::Context;
 use rlua::UserDataMethods;
 use rlua::UserData;
 use rlua::MetaMethod;
@@ -283,9 +282,6 @@ end
 }
 
 fn main() -> () {
-    // lua_entry();
-    // return;
-
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -433,31 +429,55 @@ fn main() -> () {
     // w/e widget has focus is the current "top" widget.
     // widget_stack.push(Box::new(Console::new()));
 
+    let mut lua_src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    lua_src_dir.push("lua");
+    let lua_main = lua_src_dir.join("main.lua");
+    
     let lua = Lua::new();
     lua.context(|lua_ctx| {
         let globals = lua_ctx.globals();
         globals.set("string_var", "hello").expect("failed to set global var");
     });
 
+    fn load_lua_file<P>(lua: &Lua, c: P) where P: std::convert::AsRef<std::path::Path> {
+
+        let file_contents = std::fs::read_to_string(c).expect("Failed to load lua file");
+        lua.context(|lua_ctx| {
+            lua_ctx.load(&file_contents).exec();
+        });
+    }
+
+    load_lua_file(&lua, lua_main);
 
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
 
+
     fn hello(lua: &Lua, s: String) {
         lua.context(|lua_ctx| {
             let g = lua_ctx.globals();
-            g.set("hello", s);
+            println!("Setting hello to: {}", s);
+            // g.set("hello", s).unwrap();
+
+            let p = lua_ctx.load(&s).exec();
+            match p {
+                Ok(r) => {
+                    println!("{:#?}", r);
+                },
+                Err(r) => {
+                    println!("{}", r);
+                }
+            };
         });
 
         lua.context(|lua_ctx| {
             let g = lua_ctx.globals();
-            println!("Value of hello: {}", g.get::<_, String>("hello").unwrap());
-
-            
-
+            //println!("Value of hello: {}", g.get::<_, String>("hello").unwrap());
         });
     }
+
+
 
     let temp = |value| { hello(&lua, value) };
 
