@@ -22,6 +22,8 @@ use std::io;
 
 use std::path::PathBuf;
 
+use reqwest::blocking::Client;
+
 use sdl2;
 use sdl2::event::Event;
 // use sdl2::EventPump;
@@ -282,7 +284,13 @@ end
     Ok(())
 }
 
+
 fn main() -> () {
+    let client = Client::new();
+
+    let res = client.get("http://192.168.0.4:5000/overthegun/overthegun").send().unwrap();
+    println!("{:#?}", res);
+
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -538,12 +546,12 @@ fn main() -> () {
                     ..
                 } => break 'holding_loop,
                 Event::KeyUp {
-                    timestamp,
+                    timestamp: _,
                     window_id: _,
                     keycode,
                     scancode: _,
-                    keymod,
-                    repeat,
+                    keymod: _,
+                    repeat: _,
                 } => {
                     match keycode {
                         Some(Keycode::Backquote) => {
