@@ -284,13 +284,25 @@ end
     Ok(())
 }
 
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct Video {
+    url: String,
+    title: String,
+    video_id: String,
+    posted_time: String
+}
 
 fn main() -> () {
     let client = Client::new();
 
     let res = client.get("http://192.168.0.4:5000/overthegun/overthegun").send().unwrap();
+
     println!("{:#?}", res);
 
+    let p = res.json();
+    
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
