@@ -20,6 +20,8 @@ use sdl2::rect::Rect;
 use std::collections::HashMap;
 use std::io;
 
+use postgres::{Client as psqlClient, NoTls};
+
 use std::path::PathBuf;
 
 use reqwest::blocking::Client;
@@ -291,20 +293,78 @@ struct Video {
     url: String,
     title: String,
     video_id: String,
-    posted_time: String
+    posted_time: String,
+    watched: Option<bool>,
+}
+
+impl Video {
+    pub fn new(url: String, title: String, video_id: String, posted_time: String) -> Self {
+        Self {
+            url: url,
+            title: title,
+            video_id: video_id,
+            posted_time: posted_time,
+            watched: Some(false),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct Channel {
+    
+}
+
+#[derive(Debug, Deserialize)]
+struct Network {
+}
+
+fn get_channel(conn: &mut psqlClient, channel_title: String) -> Channel {
+    let s = "select * from channel where title=$1";
+    for i in conn.query(s, &[&channel_title]).unwrap() {
+        println!("{:#?}", i);
+
+        let id: i32 = i.get(0);
+        let title: &str = i.get(1);
+        let network_id: i32 = i.get(2);
+        let channel_type: &str = i.get(3);
+        let hidden: bool = i.get(4);
+        let channel_id: &str = i.get(5);
+
+        println!("{} {} {} {} {} {}", id, title, network_id, hidden, channel_type, channel_id);
+    }
+    Channel { }
+}
+
+fn add_video(conn: &mut psqlClient, channel_id: u32, vid: Video) {
+
+    let insert_s = "insert into video (video_id, channel_id, watched, posted_time, hidden, title, url) values()";
+
+    
 }
 
 fn main() -> () {
     let client = Client::new();
 
-    let res = client.get("http://192.168.0.4:5000/overthegun/overthegun").send().unwrap();
+    // let res = client.get("http://192.168.0.4:5000/gura/UCoSrY_IQQVpmIRZ9Xf-y93g").send().unwrap();
 
-    println!("{:#?}", res);
+    // println!("{:#?}", res);
 
-    let p: Vec<Video> = res.json().unwrap();
-    for i in p.iter() {
-        println!("{:#?}", i);
-    }
+    // let p: Vec<Video> = res.json().unwrap();
+    // for i in p.iter() {
+    //     println!("{:#?}", i);
+    // }
+
+    
+    let p = get_channel(&mut ps_client, "overthegun".into());
+
+
+
+    // for row in ps_client.query("SELECT * from video", &[]).unwrap() {
+    //     println!("{:#?}", row);
+    // }
+
+    
+    return;
     
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
