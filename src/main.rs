@@ -286,7 +286,7 @@ end
 
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Video {
     url: String,
     title: String,
@@ -301,7 +301,10 @@ fn main() -> () {
 
     println!("{:#?}", res);
 
-    let p = res.json();
+    let p: Vec<Video> = res.json().unwrap();
+    for i in p.iter() {
+        println!("{:#?}", i);
+    }
     
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
