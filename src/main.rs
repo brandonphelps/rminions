@@ -8,6 +8,10 @@ mod game_state;
 mod utils;
 mod widget;
 
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::format::ParseError;
+
+
 use rlua::UserDataMethods;
 use rlua::UserData;
 use rlua::Error;
@@ -289,6 +293,14 @@ end
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
+struct VideoResponse {
+    videos: Vec<Video>,
+
+    /// token to pass in for next set of videos.
+    next_token: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 struct Video {
     url: String,
     title: String,
@@ -311,14 +323,18 @@ impl Video {
 
 #[derive(Debug, Deserialize)]
 struct Channel {
-    
+    id: i32,
+    title: String,
+    channel_id: String,
+    channel_type: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct Network {
+    title: String,
 }
 
-fn get_channel(conn: &mut psqlClient, channel_title: String) -> Channel {
+fn get_channel(conn: &mut psqlClient, channel_title: String) -> Option<Channel> {
     let s = "select * from channel where title=$1";
     for i in conn.query(s, &[&channel_title]).unwrap() {
         println!("{:#?}", i);
@@ -330,39 +346,135 @@ fn get_channel(conn: &mut psqlClient, channel_title: String) -> Channel {
         let hidden: bool = i.get(4);
         let channel_id: &str = i.get(5);
 
-        println!("{} {} {} {} {} {}", id, title, network_id, hidden, channel_type, channel_id);
+        return Some(Channel {
+            id: id,
+            title: title.into(),
+            channel_id: channel_id.into(),
+            channel_type: channel_type.into(),
+        });
     }
-    Channel { }
+    None
 }
 
-fn add_video(conn: &mut psqlClient, channel_id: u32, vid: Video) {
+fn add_video(conn: &mut psqlClient, channel_id: i32, vid: Video) {
+    let insert_s = "insert into video (channel_id, video_id, watched, posted_time, hidden, title, url) values($1, $2, $3, $4, $5, $6, $7)";
+    let timezone = NaiveDateTime::parse_from_str(&vid.posted_time, "%Y-%m-%dT%H:%M:%SZ").unwrap();
 
-    let insert_s = "insert into video (video_id, channel_id, watched, posted_time, hidden, title, url) values()";
+    conn.execute(insert_s, &[&channel_id, &vid.video_id, &false, &timezone, &false, &vid.title, &vid.url]).unwrap();
+}
 
-    
+fn does_video_exist(conn: &mut psqlClient, video_id: String) -> bool {
+    let where_s = "select video_id from video where video_id=$1";
+
+    let mut res = false;
+
+    for i in conn.query(where_s, &[&video_id]).unwrap() {
+        let vid_id: &str = i.get(0);
+        // likely redudant check.
+        if vid_id == video_id {
+            res = true;            
+        }
+    }
+    res
+}
+
+struct VideoFetcher {
+    title: String,
+    channel_id: String,
+    token: Option<String>,
+    current_videos: Vec<Video>,
+    // indicates if we already proccessed first round of None
+    visited_none: bool,
+}
+
+/// Must impl iterator and have it such that the order of the videos
+/// returned is in chronological order according to the posted date.
+impl VideoFetcher {
+    pub fn new(title: String, channel_id: String) -> Self {
+        Self {
+            title: title,
+            channel_id: channel_id,
+            token: None,
+            current_videos: Vec::new(),
+            visited_none: false,
+        }
+    }
+}
+
+impl Iterator for VideoFetcher {
+    type Item = Video;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_videos.len() == 0 {
+            let client = Client::new();
+            let url = match self.token {
+                Some(ref token) => {
+                    format!("http://192.168.0.4:5000/{}/{}/{}", self.title, self.channel_id, token)
+                },
+                None => {
+                    if self.visited_none {
+                        return None;
+                    } else {
+                        self.visited_none = true;
+                        format!("http://192.168.0.4:5000/{}/{}", self.title, self.channel_id)
+                    }
+                }
+            };
+            // only need to fetch the first set of videos
+            // and not all videos for sorting since
+            // the youtube api will return with the videos
+            // in sorted order already
+            println!("Fetching more content: {}", url);
+            let res = client.get(&url).send().unwrap();
+            let mut j: VideoResponse = match res.json() {
+                Ok(r) => { r },
+                Err(f) => { panic!("{}: {}", f, url) },
+            };
+                        
+            if j.videos.len() == 0 {
+                
+            } else {
+                self.token = j.next_token;
+                // let temp = j.videos.iter().rev().collect();
+                // todo: how to insert int reverse order
+                self.current_videos.append(&mut j.videos);
+                self.current_videos.reverse();
+            }
+        }
+
+        if self.current_videos.len() > 0 {
+            self.current_videos.pop()
+        } else {
+            println!("None");
+            None
+        }
+    }
 }
 
 fn main() -> () {
     let client = Client::new();
 
-    // let res = client.get("http://192.168.0.4:5000/gura/UCoSrY_IQQVpmIRZ9Xf-y93g").send().unwrap();
 
-    // println!("{:#?}", res);
+    //let p = get_channel(&mut ps_client, "overthegun".into());
+    let c_name: String = "DF".into();
+    let c = get_channel(&mut ps_client, c_name.clone()).expect("Failed to get channel");
 
-    // let p: Vec<Video> = res.json().unwrap();
-    // for i in p.iter() {
-    //     println!("{:#?}", i);
-    // }
-
-    
-    let p = get_channel(&mut ps_client, "overthegun".into());
-
-
-
-    // for row in ps_client.query("SELECT * from video", &[]).unwrap() {
-    //     println!("{:#?}", row);
-    // }
-
+    let fetcher = VideoFetcher::new(c_name.clone(), c.channel_id.clone());
+    let mut already_added_count = 0;
+    let do_full = false;
+    for i in fetcher {
+        // println!("{:#?}", i);
+        if does_video_exist(&mut ps_client, i.video_id.clone()) {
+           // println!("Video already exists");
+            already_added_count += 1;
+        } else {
+            //println!("Should add video");
+            add_video(&mut ps_client, c.id, i);
+        }
+        
+        if !do_full && already_added_count > 40 { 
+            break;
+        }
+    }
     
     return;
     
