@@ -30,3 +30,6 @@ optional = false
 socketcan="*"
 optional = true
 
+[[bin]]
+name = "vidlid"
+path = "src/vidlid.rs"
