@@ -22,6 +22,8 @@ pub struct Video {
     watched: Option<bool>,
 }
 
+
+
 impl Video {
     pub fn new(url: String,
                title: String,
@@ -179,3 +181,13 @@ impl Iterator for VideoFetcher {
     }
 }
 
+
+pub fn get_networks(conn: &mut psqlClient) -> Vec<String> {
+    let select = "select title from network";
+    let mut rest = Vec::new();
+    for i in conn.query(select, &[]).unwrap() {
+        let title: &str = i.get(0);
+        rest.push(title.into())
+    }
+    rest
+}
