@@ -182,7 +182,7 @@ impl Iterator for VideoFetcher {
 }
 
 
-pub fn get_networks(conn: &mut psqlClient) -> Vec<String> {
+pub fn get_networks(conn: &mut postgres::Client) -> Vec<String> {
     let select = "select title from network";
     let mut rest = Vec::new();
     for i in conn.query(select, &[]).unwrap() {

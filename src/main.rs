@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+mod vidlid_db;
 mod circles;
 mod collision;
 mod console;
@@ -8,7 +9,10 @@ mod game_state;
 mod utils;
 mod widget;
 
-
+use std::time::Duration;
+use std::sync::mpsc;
+use std::thread;
+use std::process::{Command as pCommand};
 
 use rlua::UserDataMethods;
 use rlua::UserData;
@@ -22,11 +26,7 @@ use sdl2::rect::Rect;
 use std::collections::HashMap;
 use std::io;
 
-
-
 use std::path::PathBuf;
-
-use reqwest::blocking::Client;
 
 use sdl2;
 use sdl2::event::Event;
@@ -289,11 +289,63 @@ end
 }
 
 fn main() -> () {
-    let client = Client::new();
+
+
+    let (tx, rx) = mpsc::channel();
+
+    let tx1 = tx.clone();
+    thread::spawn(move || {
+        let vals = vec![
+            String::from("hi"),
+            String::from("from"),
+            String::from("the"),
+            String::from("thread"),
+        ];
+
+        for val in vals {
+            tx1.send(val).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+
+    let mut lua_src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    lua_src_dir.push("lua");
+    let lua_main = lua_src_dir.join("main.lua");
+    let lua_p = Lua::new();
+    
+    thread::spawn(move || {
+        
+        lua_p.context(|lua_ctx| {
+            let globals = lua_ctx.globals();
+            globals.set("string_var", "hello").expect("failed to set global var");
+        });
+
+
+        let vals = vec![
+            String::from("more"),
+            String::from("messages"),
+            String::from("for"),
+            String::from("you"),
+        ];
+
+        for val in vals {
+            tx.send(val).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+
+        lua_p.context(|lua_ctx|  {
+            let globals = lua_ctx.globals();
+            tx.send(globals.get::<_, String>("string_var").unwrap()).unwrap();
+        });
+    });
 
     
+    for received in rx {
+        println!("{}", received);
+    }
+    let lua = Lua::new();
     return;
-    
+
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -441,15 +493,6 @@ fn main() -> () {
     // w/e widget has focus is the current "top" widget.
     // widget_stack.push(Box::new(Console::new()));
 
-    let mut lua_src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    lua_src_dir.push("lua");
-    let lua_main = lua_src_dir.join("main.lua");
-    
-    let lua = Lua::new();
-    lua.context(|lua_ctx| {
-        let globals = lua_ctx.globals();
-        globals.set("string_var", "hello").expect("failed to set global var");
-    });
 
     fn load_lua_file<P>(lua: &Lua, c: P) where P: std::convert::AsRef<std::path::Path> {
 
@@ -460,6 +503,9 @@ fn main() -> () {
     }
 
     load_lua_file(&lua, lua_main);
+
+
+
 
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -508,6 +554,18 @@ fn main() -> () {
         });
         res
     }
+
+    let output = if cfg!(target_os = "windows") {
+        pCommand::new("cmd")
+            .args(&["/C", "echo hello"])
+            .output()
+            .expect("failed to execute process")
+    } else {
+        pCommand::new("open").
+            args(&["-a", "firefox", "https://www.google.com"])
+            .output()
+            .expect("failed to execute process")
+    };
 
     let temp = |value| { hello(&lua, value) };
 

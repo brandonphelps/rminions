@@ -38,3 +38,11 @@ optional = true
 [[bin]]
 name = "vidlid"
 path = "src/vidlid.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[[bin]]
+name = "basic_tcp"
+path = "src/basic_threaded_server.rs"

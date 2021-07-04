@@ -1,3 +1,6 @@
+
+#![allow(unused_imports)]
+
 #[macro_use] extern crate rocket;
 
 use rocket::response::content::Html;
