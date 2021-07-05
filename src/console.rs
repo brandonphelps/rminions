@@ -1,3 +1,6 @@
+use std::sync::mpsc;
+use std::sync::Arc;
+use std::sync::Mutex;
 use sdl2::rect::Rect;
 use std::collections::HashMap;
 
@@ -75,16 +78,16 @@ pub struct Console<'ttf, 'a, 'callback> {
     // height of the console frame in pixels.
     console_height: u32,
 
-    // need some sort of callback hook for when event should occur.
-    /// callback function if defined
-    enter_callback: &'callback dyn Fn(String) -> Option<String>,
+    receiver: Arc<Mutex<mpsc::Receiver<String>>>,
+    sender: Arc<Mutex<mpsc::Sender<String>>>,
 }
 
 impl<'ttf, 'a, 'callback> Console<'ttf, 'a, 'callback> {
     pub fn new(
         font_path: PathBuf,
         ttf_c: &'ttf Sdl2TtfContext,
-        enter_callback: &'callback dyn Fn(String) -> Option<String>,
+        receiver: Arc<Mutex<mpsc::Receiver<String>>>,
+        sender: Arc<Mutex<mpsc::Sender<String>>>
     ) -> Self {
         Self {
             current_string: String::new(),
@@ -95,7 +98,8 @@ impl<'ttf, 'a, 'callback> Console<'ttf, 'a, 'callback> {
             char_height: 20,
             console_width: 700,
             console_height: 600,
-            enter_callback: enter_callback,
+            receiver,
+            sender,
         }
     }
 
@@ -115,7 +119,6 @@ impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
     }
 
     fn update_event(&mut self, event: sdl2::event::Event) {
-        let mut handled_string = None;
         match event {
             Event::KeyDown {
                 keycode: Some(t),
@@ -136,7 +139,9 @@ impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
                     }
                     Keycode::KpEnter | Keycode::Return => {
                         self.buffer.push(self.current_string.clone());
-                        handled_string = Some(self.current_string.clone());
+                        {
+                            self.sender.lock().unwrap().send(self.current_string.clone()).unwrap();
+                        }
                         self.current_string.clear();
                     }
                     _ => (),
@@ -151,15 +156,16 @@ impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
             _ => (),
         };
 
-        match handled_string {
-            Some(t) => {
-                let res = (self.enter_callback)(t);
-                match res {
-                    Some(s) => self.buffer.push(s),
-                    None => (),
-                }
+        {
+            match self.receiver.lock().unwrap().try_recv() {
+                Ok(r) => {
+                    println!("Got a message back: {}", r);
+                    self.buffer.push(r);
+                },
+                Err(r) => {
+                    println!("Got recieve error, maybe jus tokay?: {:#?}", r);
+                },
             }
-            None => (),
         }
     }
 }
@@ -369,7 +375,14 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                         } else {
                             Some('s')
                         }
-                    }
+                    },
+                    Keycode::G => {
+                        if is_upper {
+                            Some('G')
+                        } else {
+                            Some('g')
+                        }
+                    },
                     Keycode::P => {
                         if is_upper {
                             Some('P')
@@ -522,6 +535,8 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                     Keycode::Tab => None,
                     Keycode::LAlt => None,
                     Keycode::RAlt => None,
+                    Keycode::LCtrl => None,
+                    Keycode::RCtrl => None,
                     Keycode::Return => None,
                     Keycode::LShift => None,
                     Keycode::Escape => None,

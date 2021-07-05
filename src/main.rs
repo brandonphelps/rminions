@@ -350,21 +350,25 @@ impl LuaWorker {
                                 match *j {
                                     rlua::Value::Nil => {
                                         {
+                                            println!("Got nil");
                                             sender.lock().unwrap().send("nil".into()).unwrap();
                                         }
                                     },
                                     rlua::Value::Boolean(t) => {
                                         {
+                                            println!("Got bool");
                                             sender.lock().unwrap().send(format!("{}", t)).unwrap();
                                         }
                                     },
                                     rlua::Value::Integer(t) => {
                                         {
+                                            println!("Got integer");
                                             sender.lock().unwrap().send(format!("{}", t)).unwrap();
                                         }
                                     },
                                     _ => {
                                         {
+                                            println!("Got unknown");
                                             sender.lock().unwrap().send("unknown string".into()).unwrap();
                                         }
                                     }
@@ -445,16 +449,18 @@ fn main() -> () {
 
     let lua_worker = LuaWorker::new(Arc::clone(&arc_rx), Arc::clone(&arc_tx));
 
-    for i in vec!["a=1", "b=1", "a+b", r#"populate_db("gura")"#, "l_exit"] {
-        tx_one.send(i.into()).unwrap();
-        thread::sleep(Duration::from_secs(2));
-    }
+    // for i in vec!["a=1", "b=1", "a+b", r#"populate_db("gura")"#, "l_exit"] {
+    //     tx_one.send(i.into()).unwrap();
+    //     thread::sleep(Duration::from_secs(2));
+    // }
 
+    let arc_tx_one = Arc::new(Mutex::new(tx_one));
+    let arc_rx_two = Arc::new(Mutex::new(rx_two));
 
     println!("Finished sending messages waiting for responses");
-    thread::sleep(Duration::from_secs(3));
+    thread::sleep(Duration::from_secs(1));
 
-    println!("ResponseS: {}", rx_two.recv().unwrap());
+    // println!("ResponseS: {}", rx_two.recv().unwrap());
     let lua = Lua::new();
     let mut lua_src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     lua_src_dir.push("lua");
@@ -689,7 +695,10 @@ fn main() -> () {
     let mut widget_stack = Vec::<Box<dyn widget::DrawableWidget>>::new();
     let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p,
                                                                       &ttf_context,
-                                                                      &temp));
+                                                                      &temp,
+                                                                      Arc::clone(&arc_rx_two),
+                                                                      Arc::clone(&arc_tx_one),
+    ));
     widget_stack.push(temp);
 
     // hold the app and wait for user to quit.
@@ -765,8 +774,12 @@ fn main() -> () {
         }
     }
 
+
     if let Some(thread) = lua_worker.thread {
         println!("Waiting on lua thread to finish, as it hsould");
+
+        arc_tx_one.lock().unwrap().send("l_exit".into()).unwrap();
+
         thread.join().unwrap();
     }
 }
