@@ -318,11 +318,32 @@ impl LuaWorker {
                     
                     match lua_ret {
                         Ok(r) => {
-                            let p = r.iter().map(|value| format!("{:?}", value)).collect::<Vec<_>>().join("\t");
-
-                            {
-                                sender.lock().unwrap().send(p).unwrap();
+                            
+                            for j in r.iter() {
+                                match *j {
+                                    rlua::Value::Nil => {
+                                        {
+                                            sender.lock().unwrap().send("nil".into()).unwrap();
+                                        }
+                                    },
+                                    rlua::Value::Boolean(t) => {
+                                        {
+                                            sender.lock().unwrap().send(format!("{}", t)).unwrap();
+                                        }
+                                    },
+                                    rlua::Value::Integer(t) => {
+                                        {
+                                            sender.lock().unwrap().send(format!("{}", t)).unwrap();
+                                        }
+                                    },
+                                    _ => {
+                                        {
+                                            sender.lock().unwrap().send("unknown string".into()).unwrap();
+                                        }
+                                    }
+                                }
                             }
+
 
                             // for j in r.iter() {
                             //     println!("j: {:?}", *j);
@@ -553,7 +574,7 @@ fn main() -> () {
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.push("lazy.ttf");
-
+    
     fn hello(lua: &Lua, s: String) -> Option<String> {
         let mut res = None;
         lua.context(|lua_ctx| {
@@ -572,15 +593,21 @@ fn main() -> () {
                     println!("{:#?}", r);
                     for j in r.iter() {
                         match *j {
-                            rlua::Value::Nil => res = Some("nil".into()),
+                            rlua::Value::Nil => {
+                                res = Some("nil".into())
+                            },
+                            rlua::Value::Boolean(t) => {
+                                res = Some(format!("{}", t))
+                            },
+                            rlua::Value::Integer(t) => {
+                                res = Some(format!("{}", t))
+                            },
                             _ => {
                                 res = Some("to string undefined for".into());
                             }
                         }
                     }
-
-                    res = Some("hello".into());
-                }
+                },
                 Err(r) => {
                     res = match r {
                         Error::SyntaxError {

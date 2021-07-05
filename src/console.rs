@@ -190,6 +190,9 @@ impl<'ttf, 'a, 'callback> DrawableWidget for Console<'ttf, 'a, 'callback> {
                     .expect("Failed to draw background for console");
 
                 for (index, i) in self.buffer.iter().enumerate() {
+                    if i.len() == 0 {
+                        continue
+                    }
                     let s = self
                         .font
                         .render(i)
@@ -273,7 +276,6 @@ fn get_character_from_event(event: &Event) -> Option<char> {
             } else {
                 false
             };
-
             match keycode {
                 Some(key) => match key {
                     Keycode::A => {
