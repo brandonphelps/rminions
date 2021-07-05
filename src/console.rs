@@ -316,7 +316,6 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                         if is_upper {
                             Some('A')
                         } else {
-                            println!("{:#?}", event);
                             Some('a')
                         }
                     }
