@@ -30,12 +30,14 @@ fn populate_db(channel_name: String) -> Vec<String> {
     let fetcher = VideoFetcher::new(c_name.clone(), c.get_channel_id());
     let mut already_added_count = 0;
     let do_full = false;
+    let mut res = Vec::new();
     for i in fetcher {
         if does_video_exist(&mut ps_client, i.get_video_id()) {
             println!("Already have video: {}", i.get_title());
             already_added_count += 1;
+            res.push(i.get_title());
         } else {
-            println!("Adding vid: {}", i.get_title());
+            res.push(format!("Adding: {}", i.get_title()));
             add_video(&mut ps_client, c.get_id(), i);
         }
 
@@ -43,11 +45,7 @@ fn populate_db(channel_name: String) -> Vec<String> {
             break;
         }
     }
-
-    Vec::new()
-
-// vec!["hello".into(), "world".into(), "i like cheeze".into()]
-
+    res
 }
 
 
@@ -74,6 +72,7 @@ impl LuaWorker {
                 Ok(res)
             }).unwrap();
             let channel_list = lua_ctx.create_function(|_, ()| {
+                println!("Getting channels");
                 Ok(get_channels())
             }).unwrap();
             globals.set("populate_db", pop_db).unwrap();
@@ -124,6 +123,9 @@ impl LuaWorker {
                                     },
                                     rlua::Value::Integer(t) => {
                                         LuaWorker::send_message(&sender, Some(format!("{}", t)));
+                                    },
+                                    rlua::Value::String(t) => {
+                                        LuaWorker::send_message(&sender, Some(format!("{}", t.to_str().unwrap())));
                                     },
                                     rlua::Value::Table(t) => {
                                         let len: i64 = t.len().unwrap();

@@ -348,6 +348,13 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                             Some('e')
                         }
                     }
+                    Keycode::M => {
+                        if is_upper {
+                            Some('M')
+                        } else {
+                            Some('m')
+                        }
+                    },
                     Keycode::F => {
                         if is_upper {
                             Some('F')
@@ -571,6 +578,27 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                     Keycode::LAlt => None,
                     Keycode::RAlt => None,
                     Keycode::LCtrl => None,
+                    Keycode::LeftBracket => {
+                        if is_upper {
+                            Some('{')
+                        } else {
+                            Some('[')
+                        }
+                    },
+                    Keycode::RightBracket => {
+                        if is_upper {
+                            Some('}')
+                        } else {
+                            Some(']')
+                        }
+                    },
+                    Keycode::Period => {
+                        if is_upper {
+                            Some('>')
+                        } else {
+                            Some('.')
+                        }
+                    },
                     Keycode::RCtrl => None,
                     Keycode::Return => None,
                     Keycode::LShift => None,
