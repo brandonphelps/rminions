@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use sdl2::rect::Rect;
+use std::collections::HashMap;
 
 use sdl2::keyboard::Mod;
 
@@ -15,7 +15,6 @@ use sdl2::ttf::Sdl2TtfContext;
 use sdl2::video::Window;
 use std::path::PathBuf;
 
-
 /// manages the state of keyboard input allowing for checking if
 /// a key is still pressed down while another key event occurs.
 /// all values are initially false.
@@ -26,22 +25,21 @@ pub struct KeyboardState {
 impl KeyboardState {
     pub fn new() -> Self {
         Self {
-            pressed_down_keys: HashMap::new()
+            pressed_down_keys: HashMap::new(),
         }
     }
 
     /// only accepts KeyUp and KeyDown events, all other events
     /// are ignored and do not do anything
     pub fn update(&mut self, event: Event) {
-
         // key, is_down, repeat
         let info = match event {
-            Event::KeyUp { keycode, repeat, .. } => {
-                (keycode.unwrap(), false, repeat)
-            },
-            Event::KeyDown { keycode, repeat, .. } => {
-                (keycode.unwrap(), true, repeat)                
-            },
+            Event::KeyUp {
+                keycode, repeat, ..
+            } => (keycode.unwrap(), false, repeat),
+            Event::KeyDown {
+                keycode, repeat, ..
+            } => (keycode.unwrap(), true, repeat),
             _ => {
                 return;
             }
@@ -52,8 +50,8 @@ impl KeyboardState {
 
     pub fn is_down(&self, key: Keycode) -> bool {
         match self.pressed_down_keys.get(&key) {
-            Some(k) => { *k },
-            None => { false },
+            Some(k) => *k,
+            None => false,
         }
     }
 }
@@ -77,17 +75,17 @@ pub struct Console<'ttf, 'a, 'callback> {
     // height of the console frame in pixels.
     console_height: u32,
 
-    // need some sort of callback hook for when event should occur. 
-    /// callback function if defined 
+    // need some sort of callback hook for when event should occur.
+    /// callback function if defined
     enter_callback: &'callback dyn Fn(String) -> Option<String>,
 }
 
 impl<'ttf, 'a, 'callback> Console<'ttf, 'a, 'callback> {
-    pub fn new(font_path: PathBuf,
-               ttf_c: &'ttf Sdl2TtfContext,
-               enter_callback: &'callback dyn Fn(String) -> Option<String>) -> Self {
-
-
+    pub fn new(
+        font_path: PathBuf,
+        ttf_c: &'ttf Sdl2TtfContext,
+        enter_callback: &'callback dyn Fn(String) -> Option<String>,
+    ) -> Self {
         Self {
             current_string: String::new(),
             buffer: Vec::new(),
@@ -101,8 +99,8 @@ impl<'ttf, 'a, 'callback> Console<'ttf, 'a, 'callback> {
         }
     }
 
-    /// inserts an entry into the back buffer for rendering. 
-    pub fn insert_text(&mut self, _value: String)  {
+    /// inserts an entry into the back buffer for rendering.
+    pub fn insert_text(&mut self, _value: String) {
         todo!()
     }
 }
@@ -124,14 +122,14 @@ impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
                 repeat: false,
                 ..
             } => {
-                // character input. 
+                // character input.
                 let charac = get_character_from_event(&event);
                 match charac {
                     Some(c) => self.current_string.push(c),
-                    None => ()
+                    None => (),
                 };
 
-                // control handling. 
+                // control handling.
                 match t {
                     Keycode::Backspace => {
                         self.current_string.pop();
@@ -160,8 +158,8 @@ impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
                     Some(s) => self.buffer.push(s),
                     None => (),
                 }
-            },
-            None => ()
+            }
+            None => (),
         }
     }
 }
@@ -187,7 +185,9 @@ impl<'ttf, 'a, 'callback> DrawableWidget for Console<'ttf, 'a, 'callback> {
             .with_texture_canvas(&mut console_texture, |user_context| {
                 // draw the backbuffer.
                 user_context.set_draw_color(Color::RGBA(0, 200, 0, 255));
-                user_context.fill_rect(Rect::new(0, 0, self.console_width, self.console_height)).expect("Failed to draw background for console");
+                user_context
+                    .fill_rect(Rect::new(0, 0, self.console_width, self.console_height))
+                    .expect("Failed to draw background for console");
 
                 for (index, i) in self.buffer.iter().enumerate() {
                     let s = self
@@ -222,9 +222,12 @@ impl<'ttf, 'a, 'callback> DrawableWidget for Console<'ttf, 'a, 'callback> {
             // violated.
 
             let target_widget = self.current_string.len() as u32 * self.p_widget;
-            let target_rect = sdl2::rect::Rect::new(0,
-                                                    (self.console_height - self.p_widget) as i32,
-                                                    target_widget, self.p_widget);
+            let target_rect = sdl2::rect::Rect::new(
+                0,
+                (self.console_height - self.p_widget) as i32,
+                target_widget,
+                self.p_widget,
+            );
 
             self.surface = Some(
                 self.font
@@ -252,11 +255,15 @@ impl<'ttf, 'a, 'callback> DrawableWidget for Console<'ttf, 'a, 'callback> {
 /// Returns the correponding keyboard char for the provided
 /// event.
 /// If the event is not a representable character, (i.e mouse event).
-/// Then None is returned. 
+/// Then None is returned.
 fn get_character_from_event(event: &Event) -> Option<char> {
     match event {
-        Event::KeyDown { keycode, keymod, .. } | Event::KeyUp { keycode, keymod, .. } => {
-
+        Event::KeyDown {
+            keycode, keymod, ..
+        }
+        | Event::KeyUp {
+            keycode, keymod, ..
+        } => {
             let p = *keymod;
             let is_upper = if (p & Mod::LSHIFTMOD) == Mod::LSHIFTMOD
                 || (p & Mod::RSHIFTMOD) == Mod::RSHIFTMOD
@@ -266,267 +273,265 @@ fn get_character_from_event(event: &Event) -> Option<char> {
             } else {
                 false
             };
-            
-            match keycode { 
-                Some(key) => {
-                    match key {
-                        Keycode::A => {
-                            if is_upper {
-                                Some('A')
-                            } else {
-                                println!("{:#?}", event);
-                                Some('a')
-                            }
-                        },
-                        Keycode::B => {
-                            if is_upper {
-                                Some('B')
-                            } else {
-                                Some('b')
-                            }
-                        },
-                        Keycode::C => {
-                            if is_upper {
-                                Some('C')
-                            } else {
-                                Some('c')
-                            }
-                        },
-                        Keycode::D => {
-                            if is_upper {
-                                Some('D')
-                            } else {
-                                Some('d')
-                            }
-                        },
-                        Keycode::E => {
-                            if is_upper {
-                                Some('E')
-                            } else {
-                                Some('e')
-                            }
-                        },
-                        Keycode::F => {
-                            if is_upper {
-                                Some('F')
-                            } else {
-                                Some('f')
-                            }
-                        },
-                        Keycode::H => {
-                            if is_upper {
-                                Some('H')
-                            } else {
-                                Some('h')
-                            }
-                        },
-                        Keycode::I => {
-                            if is_upper {
-                                Some('I')
-                            } else {
-                                Some('i')
-                            }
-                        },
-                        Keycode::J => {
-                            if is_upper {
-                                Some('J')
-                            } else {
-                                Some('j')
-                            }
-                        },
-                        Keycode::K => {
-                            if is_upper {
-                                Some('K')
-                            } else {
-                                Some('k')
-                            }
-                        },
-                        Keycode::L => {
-                            if is_upper {
-                                Some('L')
-                            } else {
-                                Some('l')
-                            }
-                        },
-                        Keycode::O => {
-                            if is_upper {
-                                Some('O')
-                            } else {
-                                Some('o')
-                            }
-                        },
-                        Keycode::S => {
-                            if is_upper {
-                                Some('S')
-                            } else {
-                                Some('s')
-                            }
-                        },
-                        Keycode::P => {
-                            if is_upper {
-                                Some('P')
-                            } else {
-                                Some('p')
-                            }
-                        },
-                        Keycode::T => {
-                            if is_upper {
-                                Some('T')
-                            } else {
-                                Some('t')
-                            }
-                        },
-                        Keycode::R => {
-                            if is_upper {
-                                Some('R')
-                            } else {
-                                Some('r')
-                            }
-                        },
-                        Keycode::W => {
-                            if is_upper {
-                                Some('W')
-                            } else {
-                                Some('w')
-                            }
-                        },
-                        Keycode::N => {
-                            if is_upper {
-                                Some('N')
-                            } else {
-                                Some('n')
-                            }
-                        },
-                        Keycode::U => {
-                            if is_upper {
-                                Some('U')
-                            } else {
-                                Some('u')
-                            }
-                        },
-                        Keycode::Q => {
-                            if is_upper {
-                                Some('Q')
-                            } else {
-                                Some('q')
-                            }
-                        },
-                        Keycode::Comma => {
-                            if is_upper {
-                                Some('<')
-                            } else {
-                                Some(',')
-                            }
-                        },
-                        Keycode::Quote => {
-                            if is_upper {
-                                Some('"')
-                            } else {
-                                Some('\'')
-                            }
-                        },
-                        Keycode::Num0 => {
-                            if is_upper {
-                                Some(')')
-                            } else {
-                                Some('0')
-                            }
-                        },
-                        Keycode::Num1 => {
-                            if is_upper {
-                                Some('!')
-                            } else {
-                                Some('1')
-                            }
-                        },
-                        Keycode::Num2 => {
-                            if is_upper {
-                                Some('@')
-                            } else {
-                                Some('2')
-                            }
-                        },
-                        Keycode::Num3 => {
-                            if is_upper {
-                                Some('#')
-                            } else {
-                                Some('3')
-                            }
-                        },
-                        Keycode::Num4 => {
-                            if is_upper {
-                                Some('$')
-                            } else {
-                                Some('4')
-                            }
-                        },
-                        Keycode::Num5 => {
-                            if is_upper {
-                                Some('%')
-                            } else {
-                                Some('5')
-                            }
-                        },
-                        Keycode::Num6 => {
-                            if is_upper {
-                                Some('^')
-                            } else {
-                                Some('6')
-                            }
-                        },
-                        Keycode::Num7 => {
-                            if is_upper {
-                                Some('&')
-                            } else {
-                                Some('7')
-                            }
-                        },
-                        Keycode::Num8 => {
-                            if is_upper {
-                                Some('*')
-                            } else {
-                                Some('8')
-                            }
-                        },
-                        Keycode::Num9 => {
-                            if is_upper {
-                                Some('(')
-                            } else {
-                                Some('9')
-                            }
-                        },
-                        Keycode::Equals => {
-                            if is_upper {
-                                Some('+')
-                            } else {
-                                Some('=')
-                            }
-                        },
-                        Keycode::Minus => {
-                            if is_upper {
-                                Some('_')
-                            } else {
-                                Some('-')
-                            }
-                        },
-                        Keycode::Space => {
-                            Some(' ')
-                        },
-                        Keycode::Backspace => None,
-                        Keycode::Tab => None,
-                        Keycode::LAlt => None,
-                        Keycode::RAlt => None,
-                        Keycode::Return => None,
-                        Keycode::LShift => None,
-                        Keycode::Escape => None,
-                        Keycode::RShift => None,
-                        _ => { todo!("haven't imple {:#?}", keycode) } 
+
+            match keycode {
+                Some(key) => match key {
+                    Keycode::A => {
+                        if is_upper {
+                            Some('A')
+                        } else {
+                            println!("{:#?}", event);
+                            Some('a')
+                        }
+                    }
+                    Keycode::B => {
+                        if is_upper {
+                            Some('B')
+                        } else {
+                            Some('b')
+                        }
+                    }
+                    Keycode::C => {
+                        if is_upper {
+                            Some('C')
+                        } else {
+                            Some('c')
+                        }
+                    }
+                    Keycode::D => {
+                        if is_upper {
+                            Some('D')
+                        } else {
+                            Some('d')
+                        }
+                    }
+                    Keycode::E => {
+                        if is_upper {
+                            Some('E')
+                        } else {
+                            Some('e')
+                        }
+                    }
+                    Keycode::F => {
+                        if is_upper {
+                            Some('F')
+                        } else {
+                            Some('f')
+                        }
+                    }
+                    Keycode::H => {
+                        if is_upper {
+                            Some('H')
+                        } else {
+                            Some('h')
+                        }
+                    }
+                    Keycode::I => {
+                        if is_upper {
+                            Some('I')
+                        } else {
+                            Some('i')
+                        }
+                    }
+                    Keycode::J => {
+                        if is_upper {
+                            Some('J')
+                        } else {
+                            Some('j')
+                        }
+                    }
+                    Keycode::K => {
+                        if is_upper {
+                            Some('K')
+                        } else {
+                            Some('k')
+                        }
+                    }
+                    Keycode::L => {
+                        if is_upper {
+                            Some('L')
+                        } else {
+                            Some('l')
+                        }
+                    }
+                    Keycode::O => {
+                        if is_upper {
+                            Some('O')
+                        } else {
+                            Some('o')
+                        }
+                    }
+                    Keycode::S => {
+                        if is_upper {
+                            Some('S')
+                        } else {
+                            Some('s')
+                        }
+                    }
+                    Keycode::P => {
+                        if is_upper {
+                            Some('P')
+                        } else {
+                            Some('p')
+                        }
+                    }
+                    Keycode::T => {
+                        if is_upper {
+                            Some('T')
+                        } else {
+                            Some('t')
+                        }
+                    }
+                    Keycode::R => {
+                        if is_upper {
+                            Some('R')
+                        } else {
+                            Some('r')
+                        }
+                    }
+                    Keycode::W => {
+                        if is_upper {
+                            Some('W')
+                        } else {
+                            Some('w')
+                        }
+                    }
+                    Keycode::N => {
+                        if is_upper {
+                            Some('N')
+                        } else {
+                            Some('n')
+                        }
+                    }
+                    Keycode::U => {
+                        if is_upper {
+                            Some('U')
+                        } else {
+                            Some('u')
+                        }
+                    }
+                    Keycode::Q => {
+                        if is_upper {
+                            Some('Q')
+                        } else {
+                            Some('q')
+                        }
+                    }
+                    Keycode::Comma => {
+                        if is_upper {
+                            Some('<')
+                        } else {
+                            Some(',')
+                        }
+                    }
+                    Keycode::Quote => {
+                        if is_upper {
+                            Some('"')
+                        } else {
+                            Some('\'')
+                        }
+                    }
+                    Keycode::Num0 => {
+                        if is_upper {
+                            Some(')')
+                        } else {
+                            Some('0')
+                        }
+                    }
+                    Keycode::Num1 => {
+                        if is_upper {
+                            Some('!')
+                        } else {
+                            Some('1')
+                        }
+                    }
+                    Keycode::Num2 => {
+                        if is_upper {
+                            Some('@')
+                        } else {
+                            Some('2')
+                        }
+                    }
+                    Keycode::Num3 => {
+                        if is_upper {
+                            Some('#')
+                        } else {
+                            Some('3')
+                        }
+                    }
+                    Keycode::Num4 => {
+                        if is_upper {
+                            Some('$')
+                        } else {
+                            Some('4')
+                        }
+                    }
+                    Keycode::Num5 => {
+                        if is_upper {
+                            Some('%')
+                        } else {
+                            Some('5')
+                        }
+                    }
+                    Keycode::Num6 => {
+                        if is_upper {
+                            Some('^')
+                        } else {
+                            Some('6')
+                        }
+                    }
+                    Keycode::Num7 => {
+                        if is_upper {
+                            Some('&')
+                        } else {
+                            Some('7')
+                        }
+                    }
+                    Keycode::Num8 => {
+                        if is_upper {
+                            Some('*')
+                        } else {
+                            Some('8')
+                        }
+                    }
+                    Keycode::Num9 => {
+                        if is_upper {
+                            Some('(')
+                        } else {
+                            Some('9')
+                        }
+                    }
+                    Keycode::Equals => {
+                        if is_upper {
+                            Some('+')
+                        } else {
+                            Some('=')
+                        }
+                    }
+                    Keycode::Minus => {
+                        if is_upper {
+                            Some('_')
+                        } else {
+                            Some('-')
+                        }
+                    }
+                    Keycode::Space => Some(' '),
+                    Keycode::Backspace => None,
+                    Keycode::Tab => None,
+                    Keycode::LAlt => None,
+                    Keycode::RAlt => None,
+                    Keycode::Return => None,
+                    Keycode::LShift => None,
+                    Keycode::Escape => None,
+                    Keycode::RShift => None,
+                    _ => {
+                        todo!("haven't imple {:#?}", keycode)
                     }
                 },
-                None => None
+                None => None,
             }
-        },
-        _ => None
+        }
+        _ => None,
     }
 }
 
@@ -545,7 +550,7 @@ mod tests {
             scancode: None,
             keymod: sdl2::keyboard::Mod::NOMOD,
             repeat: false,
-            });
+        });
     }
 
     #[test]
@@ -557,8 +562,8 @@ mod tests {
             scancode: None,
             keymod: sdl2::keyboard::Mod::NOMOD,
             repeat: false,
-            };        
-        
+        };
+
         assert_eq!(get_character_from_event(&event), 'p');
 
         let event2 = Event::KeyUp {
@@ -568,7 +573,7 @@ mod tests {
             scancode: None,
             keymod: sdl2::keyboard::Mod::LSHIFTMOD,
             repeat: false,
-            };        
+        };
         assert_eq!(get_character_from_event(&event), 'P');
     }
 }

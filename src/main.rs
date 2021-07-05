@@ -1,23 +1,23 @@
 #![allow(dead_code)]
 
-mod vidlid_db;
 mod circles;
 mod collision;
 mod console;
 mod entity_manager;
 mod game_state;
 mod utils;
+mod vidlid_db;
 mod widget;
 
-use std::time::Duration;
+use std::process::Command as pCommand;
 use std::sync::mpsc;
 use std::thread;
-use std::process::{Command as pCommand};
+use std::time::Duration;
 
-use rlua::UserDataMethods;
-use rlua::UserData;
 use rlua::Error;
 use rlua::MetaMethod;
+use rlua::UserData;
+use rlua::UserDataMethods;
 use std::io::BufRead;
 
 use rlua::Lua;
@@ -41,6 +41,9 @@ use sdl2::keyboard::Keycode;
 use entity_manager::Entity;
 use game_state::{Command, Position};
 use utils::Path;
+
+use std::sync::Arc;
+use std::sync::Mutex;
 
 // todo: create gui implementation if a user wanted to play the game themselves.
 
@@ -111,25 +114,26 @@ fn lua_entry() -> rlua::Result<()> {
     let mut rust_val = 0;
 
     lua.context(|lua_ctx| {
-        lua_ctx.scope(|scope| {
-            // We create a 'sketchy' Lua callback that holds a mutable reference to the variable
-            // `rust_val`.  Outside of a `Context::scope` call, this would not be allowed
-            // because it could be unsafe.
+        lua_ctx
+            .scope(|scope| {
+                // We create a 'sketchy' Lua callback that holds a mutable reference to the variable
+                // `rust_val`.  Outside of a `Context::scope` call, this would not be allowed
+                // because it could be unsafe.
 
-            lua_ctx.globals().set(
-                "sketchy",
-                scope.create_function_mut(|_, ()| {
-                    rust_val = 42;
-                    Ok(())
-                })?,
-            )?;
+                lua_ctx.globals().set(
+                    "sketchy",
+                    scope.create_function_mut(|_, ()| {
+                        rust_val = 42;
+                        Ok(())
+                    })?,
+                )?;
 
-            lua_ctx.load("sketchy()").exec()
-        }).expect("Failed lua handling");
+                lua_ctx.load("sketchy()").exec()
+            })
+            .expect("Failed lua handling");
         println!("rust val: {}", rust_val);
         Ok(())
     })?;
-    
 
     lua.context(|lua_ctx| {
         let globals = lua_ctx.globals();
@@ -139,7 +143,6 @@ fn lua_entry() -> rlua::Result<()> {
         assert_eq!(globals.get::<_, String>("string_var")?, "hello");
         Ok(())
     })?;
-
 
     lua.context(|lua_ctx| {
         let globals = lua_ctx.globals();
@@ -206,15 +209,12 @@ end
 
         globals.set("add_string", add_string)?;
 
-
         let add_string_to =
             lua_ctx.create_function(|_, (obj_name, string_v): (String, String)| {
                 Ok((obj_name, string_v))
             })?;
 
-
         globals.set("add_string_to", add_string_to)?;
-
 
         impl UserData for Vec2 {
             fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
@@ -231,50 +231,58 @@ end
         let vec2_constructor = lua_ctx.create_function(|_, (x, y): (f32, f32)| Ok(Vec2(x, y)))?;
         globals.set("vec2", vec2_constructor)?;
 
-        lua_ctx.load("(vec2(1,2) + vec2(2,2)):magnitude()").eval::<f32>()?;
+        lua_ctx
+            .load("(vec2(1,2) + vec2(2,2)):magnitude()")
+            .eval::<f32>()?;
 
-        let check_equal =
-            lua_ctx.create_function(|_, (list1, list2): (Vec<String>, Vec<String>)| {
-                Ok(list1 == list2)
-            })?;
+        let check_equal = lua_ctx
+            .create_function(|_, (list1, list2): (Vec<String>, Vec<String>)| Ok(list1 == list2))?;
 
         globals.set("check_equal", check_equal)?;
 
-        assert_eq!(lua_ctx.load(r#"check_equal({"a", "b", "c"}, {"d", "e", "f"})"#).eval::<bool>()?, false);
+        assert_eq!(
+            lua_ctx
+                .load(r#"check_equal({"a", "b", "c"}, {"d", "e", "f"})"#)
+                .eval::<bool>()?,
+            false
+        );
 
         print.call::<_, ()>("hello from rust")?;
 
         Ok(())
     })?;
 
-    lua.context(|lua_ctx| {    
-        lua_ctx.scope(|scope| {
-            lua_ctx.globals().set(
-                "add_unit",
-                scope.create_function_mut(|_, (x, y): (f32, f32)| {
-                    add_unit(&mut units, x, y);
-                    Ok(())
-                })?,
-            )?;
-            let p = lua_ctx.load("add_unit(1.0, 2.3)").exec();
+    lua.context(|lua_ctx| {
+        lua_ctx
+            .scope(|scope| {
+                lua_ctx.globals().set(
+                    "add_unit",
+                    scope.create_function_mut(|_, (x, y): (f32, f32)| {
+                        add_unit(&mut units, x, y);
+                        Ok(())
+                    })?,
+                )?;
+                let p = lua_ctx.load("add_unit(1.0, 2.3)").exec();
 
-            
-            let stdin = io::stdin();
-            for line in stdin.lock().lines() {
-                let val = line.unwrap();
-                if val == "exit" {
-                    break;
+                let stdin = io::stdin();
+                for line in stdin.lock().lines() {
+                    let val = line.unwrap();
+                    if val == "exit" {
+                        break;
+                    }
+                    let p = lua_ctx.load(&val).exec();
+                    match p {
+                        Ok(r) => {
+                            println!("{:#?}", r);
+                        }
+                        Err(r) => {
+                            println!("{}", r)
+                        }
+                    }
                 }
-                let p = lua_ctx.load(&val).exec();
-                match p {
-                    Ok(r) => {
-                        println!("{:#?}", r);
-                    },
-                    Err(r) => { println!("{}", r) }
-                }
-            }
-            p
-        }).expect("failed lua handling");
+                p
+            })
+            .expect("failed lua handling");
 
         add_unit(&mut units, 2.0, 2.13);
 
@@ -288,63 +296,93 @@ end
     Ok(())
 }
 
-fn main() -> () {
 
 
-    let (tx, rx) = mpsc::channel();
+struct LuaWorker {
+    thread: Option<thread::JoinHandle<()>>,
+}
 
-    let tx1 = tx.clone();
-    thread::spawn(move || {
-        let vals = vec![
-            String::from("hi"),
-            String::from("from"),
-            String::from("the"),
-            String::from("thread"),
-        ];
+impl LuaWorker {
+    fn new(receiver: Arc<Mutex<mpsc::Receiver<String>>>,
+           sender: Arc<Mutex<mpsc::Sender<String>>>) -> Self {
+        let p = thread::spawn(move || {
+            let lua = Lua::new();
+            
+            loop {
+                println!("Waiting for lua message");
+                let message = receiver.lock().unwrap().recv().unwrap();
+                println!("Got lua message: {}", message);
 
-        for val in vals {
-            tx1.send(val).unwrap();
-            thread::sleep(Duration::from_secs(1));
+                lua.context(|lua_ctx| {
+                    let lua_ret = lua_ctx.load(&message).eval::<rlua::MultiValue>();
+                    
+                    match lua_ret {
+                        Ok(r) => {
+                            for j in r.iter() {
+                                match *j {
+                                    rlua::Value::Nil => {
+                                        {
+                                            sender.lock().unwrap().send("nil".into()).unwrap();
+                                        }
+                                    },
+                                    
+                                    _ => {
+                                        {
+                                            sender.lock().unwrap().send("to string undefined".into()).unwrap();
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        Err(r) => {
+                            println!("got an error");
+                        },
+                    };
+                });
+                thread::sleep(Duration::from_secs(1));
+            }
+        });
+
+        Self {
+            thread: Some(p)
         }
-    });
+    }
+}
 
+fn main() -> () {
+    let (tx_one, rx_one) = mpsc::channel();
+    let (tx_two, rx_two) = mpsc::channel::<String>();
+
+    let arc_tx = Arc::new(Mutex::new(tx_two));
+    let arc_rx = Arc::new(Mutex::new(rx_one));
+
+    let lua_worker = LuaWorker::new(Arc::clone(&arc_rx), Arc::clone(&arc_tx));
+
+    for i in vec!["hello", "world", "jojo"] {
+        tx_one.send(i.into());
+        thread::sleep(Duration::from_secs(2));
+    }
+    println!("Finished sending messages waiting for responses");
+    thread::sleep(Duration::from_secs(3));
+
+    for i in rx_two.iter() {
+        println!("ResponseS: {}", i);
+    }
+
+    // for received in rx {
+    //     println!("{}", received);
+    // }
+
+
+
+
+
+    return;
+
+    let lua = Lua::new();
     let mut lua_src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     lua_src_dir.push("lua");
     let lua_main = lua_src_dir.join("main.lua");
-    let lua_p = Lua::new();
-    
-    thread::spawn(move || {
-        
-        lua_p.context(|lua_ctx| {
-            let globals = lua_ctx.globals();
-            globals.set("string_var", "hello").expect("failed to set global var");
-        });
-
-
-        let vals = vec![
-            String::from("more"),
-            String::from("messages"),
-            String::from("for"),
-            String::from("you"),
-        ];
-
-        for val in vals {
-            tx.send(val).unwrap();
-            thread::sleep(Duration::from_secs(1));
-        }
-
-        lua_p.context(|lua_ctx|  {
-            let globals = lua_ctx.globals();
-            tx.send(globals.get::<_, String>("string_var").unwrap()).unwrap();
-        });
-    });
-
-    
-    for received in rx {
-        println!("{}", received);
-    }
-    let lua = Lua::new();
-    return;
 
     let sdl_context = sdl2::init().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -493,9 +531,10 @@ fn main() -> () {
     // w/e widget has focus is the current "top" widget.
     // widget_stack.push(Box::new(Console::new()));
 
-
-    fn load_lua_file<P>(lua: &Lua, c: P) where P: std::convert::AsRef<std::path::Path> {
-
+    fn load_lua_file<P>(lua: &Lua, c: P)
+    where
+        P: std::convert::AsRef<std::path::Path>,
+    {
         let file_contents = std::fs::read_to_string(c).expect("Failed to load lua file");
         lua.context(|lua_ctx| {
             lua_ctx.load(&file_contents).exec();
@@ -503,9 +542,6 @@ fn main() -> () {
     }
 
     load_lua_file(&lua, lua_main);
-
-
-
 
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -518,14 +554,18 @@ fn main() -> () {
             let p = lua_ctx.load(&s).eval::<rlua::MultiValue>();
             match p {
                 Ok(r) => {
-                    println!("{}", r.iter().map(|value| format!("{:?}", value)).collect::<Vec<_>>().join("\t"));
+                    println!(
+                        "{}",
+                        r.iter()
+                            .map(|value| format!("{:?}", value))
+                            .collect::<Vec<_>>()
+                            .join("\t")
+                    );
 
                     println!("{:#?}", r);
                     for j in r.iter() {
                         match *j {
-                            rlua::Value::Nil => {
-                                res = Some("nil".into())
-                            },
+                            rlua::Value::Nil => res = Some("nil".into()),
                             _ => {
                                 res = Some("to string undefined for".into());
                             }
@@ -533,24 +573,18 @@ fn main() -> () {
                     }
 
                     res = Some("hello".into());
-                },
+                }
                 Err(r) => {
                     res = match r {
-                        Error::SyntaxError { message, incomplete_input }  => {
-                            Some(format!("Syntax error: {} {}", incomplete_input, message))
-                        },
-                        Error::FromLuaConversionError { .. } => {
-                            Some("nil".into())
-                        },
-                        _ => { Some(format!("unknown error: {}", r.to_string())) }
+                        Error::SyntaxError {
+                            message,
+                            incomplete_input,
+                        } => Some(format!("Syntax error: {} {}", incomplete_input, message)),
+                        Error::FromLuaConversionError { .. } => Some("nil".into()),
+                        _ => Some(format!("unknown error: {}", r.to_string())),
                     }
                 }
             };
-        });
-
-        lua.context(|lua_ctx| {
-            let _g = lua_ctx.globals();
-            //println!("Value of hello: {}", g.get::<_, String>("hello").unwrap());
         });
         res
     }
@@ -561,13 +595,13 @@ fn main() -> () {
             .output()
             .expect("failed to execute process")
     } else {
-        pCommand::new("open").
-            args(&["-a", "firefox", "https://www.google.com"])
+        pCommand::new("open")
+            .args(&["-a", "firefox", "https://www.google.com"])
             .output()
             .expect("failed to execute process")
     };
 
-    let temp = |value| { hello(&lua, value) };
+    let temp = |value| hello(&lua, value);
 
     let mut widget_stack = Vec::<Box<dyn widget::DrawableWidget>>::new();
     let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context, &temp));
@@ -628,14 +662,12 @@ fn main() -> () {
                     scancode: _,
                     keymod,
                     repeat,
-                } => {
-                    match keycode {
-                        Some(Keycode::Space) => {
-                            canvas.clear();
-                        }
-                        _ => (),
+                } => match keycode {
+                    Some(Keycode::Space) => {
+                        canvas.clear();
                     }
-                }
+                    _ => (),
+                },
 
                 Event::MultiGesture { .. } => {
                     println!("Got a multigesture");
@@ -648,5 +680,3 @@ fn main() -> () {
         }
     }
 }
-
-

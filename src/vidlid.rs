@@ -1,13 +1,13 @@
-
 #![allow(unused_imports)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::response::content::Html;
-use rocket::Request;
 use rocket::response::Redirect;
+use rocket::Request;
 
-use rocket_dyn_templates::{Template, tera::Tera, context};
+use rocket_dyn_templates::{context, tera::Tera, Template};
 
 use std::collections::HashMap;
 
@@ -15,7 +15,7 @@ mod vidlid_db;
 
 use postgres::{Client as psqlClient, NoTls};
 
-use vidlid_db::{VideoFetcher,  get_channel, does_video_exist, add_video};
+use vidlid_db::{add_video, does_video_exist, get_channel, VideoFetcher};
 
 // fn main_t() {
 //     //let p = get_channel(&mut ps_client, "overthegun".into());
@@ -31,8 +31,8 @@ use vidlid_db::{VideoFetcher,  get_channel, does_video_exist, add_video};
 //         } else {
 //             add_video(&mut ps_client, c.get_id(), i);
 //         }
-        
-//         if !do_full && already_added_count > 40 { 
+
+//         if !do_full && already_added_count > 40 {
 //             break;
 //         }
 //     }
@@ -40,7 +40,7 @@ use vidlid_db::{VideoFetcher,  get_channel, does_video_exist, add_video};
 // }
 
 // #[get("/")]
-// fn index() -> Html<&'static str> { 
+// fn index() -> Html<&'static str> {
 //     Html(r#"See <a href="tera">Tera</a> or <a href="hbs">Handlebars</a>."#)
 // }
 
@@ -65,21 +65,19 @@ use vidlid_db::{VideoFetcher,  get_channel, does_video_exist, add_video};
 //         .mount("/tera", routes![tera_index, tera_hello])
 // }
 
-
-
-
 mod tera;
 
 #[get("/hello/<name>")]
 fn tera_hello(name: &str) -> Template {
-    Template::render("tera/index", context! {
-        title: "Hello",
-        name: Some(name),
-        items: vec!["One", "Two", "Three"],
-    })    
+    Template::render(
+        "tera/index",
+        context! {
+            title: "Hello",
+            name: Some(name),
+            items: vec!["One", "Two", "Three"],
+        },
+    )
 }
-
-
 
 #[get("/")]
 fn index() -> Html<&'static str> {

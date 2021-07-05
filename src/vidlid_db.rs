@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
-use serde::Deserialize;
 use chrono::NaiveDateTime;
-use postgres::{Client as psqlClient};
+use postgres::Client as psqlClient;
 use reqwest::blocking::Client;
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct VideoResponse {
@@ -22,12 +22,8 @@ pub struct Video {
     watched: Option<bool>,
 }
 
-
-
 impl Video {
-    pub fn new(url: String,
-               title: String,
-               video_id: String, posted_time: String) -> Self {
+    pub fn new(url: String, title: String, video_id: String, posted_time: String) -> Self {
         Self {
             url: url,
             title: title,
@@ -91,7 +87,19 @@ pub fn add_video(conn: &mut psqlClient, channel_id: i32, vid: Video) {
     let insert_s = "insert into video (channel_id, video_id, watched, posted_time, hidden, title, url) values($1, $2, $3, $4, $5, $6, $7)";
     let timezone = NaiveDateTime::parse_from_str(&vid.posted_time, "%Y-%m-%dT%H:%M:%SZ").unwrap();
 
-    conn.execute(insert_s, &[&channel_id, &vid.video_id, &false, &timezone, &false, &vid.title, &vid.url]).unwrap();
+    conn.execute(
+        insert_s,
+        &[
+            &channel_id,
+            &vid.video_id,
+            &false,
+            &timezone,
+            &false,
+            &vid.title,
+            &vid.url,
+        ],
+    )
+    .unwrap();
 }
 
 pub fn does_video_exist(conn: &mut psqlClient, video_id: String) -> bool {
@@ -103,7 +111,7 @@ pub fn does_video_exist(conn: &mut psqlClient, video_id: String) -> bool {
         let vid_id: &str = i.get(0);
         // likely redudant check.
         if vid_id == video_id {
-            res = true;            
+            res = true;
         }
     }
     res
@@ -139,8 +147,11 @@ impl Iterator for VideoFetcher {
             let client = Client::new();
             let url = match self.token {
                 Some(ref token) => {
-                    format!("http://192.168.0.4:5000/{}/{}/{}", self.title, self.channel_id, token)
-                },
+                    format!(
+                        "http://192.168.0.4:5000/{}/{}/{}",
+                        self.title, self.channel_id, token
+                    )
+                }
                 None => {
                     if self.visited_none {
                         return None;
@@ -157,12 +168,13 @@ impl Iterator for VideoFetcher {
             println!("Fetching more content: {}", url);
             let res = client.get(&url).send().unwrap();
             let mut j: VideoResponse = match res.json() {
-                Ok(r) => { r },
-                Err(f) => { panic!("{}: {}", f, url) },
+                Ok(r) => r,
+                Err(f) => {
+                    panic!("{}: {}", f, url)
+                }
             };
-                        
+
             if j.videos.len() == 0 {
-                
             } else {
                 self.token = j.next_token;
                 // let temp = j.videos.iter().rev().collect();
@@ -180,7 +192,6 @@ impl Iterator for VideoFetcher {
         }
     }
 }
-
 
 pub fn get_networks(conn: &mut postgres::Client) -> Vec<String> {
     let select = "select title from network";
