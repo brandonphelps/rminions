@@ -8,6 +8,7 @@ mod game_state;
 mod utils;
 mod vidlid_db;
 mod widget;
+mod lua_worker;
 
 use std::process::Command as pCommand;
 use std::sync::mpsc;
@@ -33,6 +34,8 @@ use sdl2::event::Event;
 // use sdl2::EventPump;
 
 use crate::console::Console;
+
+
 
 use sdl2::keyboard::Keycode;
 //use sdl2::render::{Canvas, Texture, TextureCreator};
@@ -298,145 +301,6 @@ end
 
 
 
-struct LuaWorker {
-    thread: Option<thread::JoinHandle<()>>,
-}
-
-impl LuaWorker {
-    fn initial_lua(lua: &Lua) {
-        lua.context(|lua_ctx| { 
-            let globals = lua_ctx.globals();
-            let pop_db = lua_ctx.create_function(|_, chn_name: String| {
-                println!("hello world: {}", chn_name);
-                populate_db(chn_name);
-                Ok(())
-            }).unwrap();
-            globals.set("populate_db", pop_db).unwrap();
-        });
-    }
-
-
-    fn new(receiver: Arc<Mutex<mpsc::Receiver<String>>>,
-           sender: Arc<Mutex<mpsc::Sender<String>>>) -> Self {
-        let p = thread::spawn(move || {
-            let lua = Lua::new();
-
-
-            // load inital lua environment
-            LuaWorker::initial_lua(&lua);
-
-            loop {
-                println!("Waiting for lua message");
-                let message = receiver.lock().unwrap().recv().unwrap();
-                println!("Got lua message: {}", message);
-                if message == "l_exit" {
-                    break;
-                } else if message == "vidlid_update(overthegun)" {
-                    populate_db("overthegun".into());
-                    continue;
-                } else if message == "vidlid_update(gura)" {
-                    populate_db("gura".into());
-                    continue;
-                }
-
-
-                lua.context(|lua_ctx| {
-                    let lua_ret = lua_ctx.load(&message).eval::<rlua::MultiValue>();
-                    
-                    match lua_ret {
-                        Ok(r) => {
-                            
-                            for j in r.iter() {
-                                match *j {
-                                    rlua::Value::Nil => {
-                                        {
-                                            println!("Got nil");
-                                            sender.lock().unwrap().send("nil".into()).unwrap();
-                                        }
-                                    },
-                                    rlua::Value::Boolean(t) => {
-                                        {
-                                            println!("Got bool");
-                                            sender.lock().unwrap().send(format!("{}", t)).unwrap();
-                                        }
-                                    },
-                                    rlua::Value::Integer(t) => {
-                                        {
-                                            println!("Got integer");
-                                            sender.lock().unwrap().send(format!("{}", t)).unwrap();
-                                        }
-                                    },
-                                    _ => {
-                                        {
-                                            println!("Got unknown");
-                                            sender.lock().unwrap().send("unknown string".into()).unwrap();
-                                        }
-                                    }
-                                }
-                            }
-
-
-                            // for j in r.iter() {
-                            //     println!("j: {:?}", *j);
-
-                            //     match *j {
-                            //         rlua::Value::Nil => {
-                            //             {
-                            //                 sender.lock().unwrap().send("nil".into()).unwrap();
-                            //             }
-                            //         },
-                            //         _ => {
-                            //             {
-                            //                 sender.lock().unwrap().send("to string undefined".into()).unwrap();
-                            //             }
-                            //         }
-                            //     }
-                            // }
-                        },
-                        Err(r) => {
-                            println!("got an error");
-                        },
-                    };
-                });
-                thread::sleep(Duration::from_secs(1));
-            }
-        });
-
-        Self {
-            thread: Some(p)
-        }
-    }
-}
-
-use postgres::{Client as psqlClient, NoTls};
-
-use crate::vidlid_db::VideoFetcher;
-use crate::vidlid_db::{get_channel, does_video_exist, add_video};
-
-fn populate_db(channel_name: String) {
-    //let p = get_channel(&mut ps_client, "overthegun".into());
-    let mut ps_client = psqlClient::connect("host=192.168.0.4 user=postgres password=secretpassword port=5432", NoTls).unwrap();
-
-    let c_name: String = channel_name;
-    let c = get_channel(&mut ps_client, c_name.clone()).expect("Failed to get channel");
-
-    let fetcher = VideoFetcher::new(c_name.clone(), c.get_channel_id());
-    let mut already_added_count = 0;
-    let do_full = false;
-    for i in fetcher {
-        if does_video_exist(&mut ps_client, i.get_video_id()) {
-            println!("Already have video: {}", i.get_title());
-            already_added_count += 1;
-        } else {
-            println!("Adding vid: {}", i.get_title());
-            add_video(&mut ps_client, c.get_id(), i);
-        }
-
-        if !do_full && already_added_count > 40 {
-            break;
-        }
-    }
-}
 
 
 
@@ -447,7 +311,7 @@ fn main() -> () {
     let arc_tx = Arc::new(Mutex::new(tx_two));
     let arc_rx = Arc::new(Mutex::new(rx_one));
 
-    let lua_worker = LuaWorker::new(Arc::clone(&arc_rx), Arc::clone(&arc_tx));
+    let lua_worker = lua_worker::LuaWorker::new(Arc::clone(&arc_rx), Arc::clone(&arc_tx));
 
     // for i in vec!["a=1", "b=1", "a+b", r#"populate_db("gura")"#, "l_exit"] {
     //     tx_one.send(i.into()).unwrap();
@@ -691,11 +555,9 @@ fn main() -> () {
 
     let temp = |value| hello(&lua, value);
 
-
     let mut widget_stack = Vec::<Box<dyn widget::DrawableWidget>>::new();
     let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p,
                                                                       &ttf_context,
-                                                                      &temp,
                                                                       Arc::clone(&arc_rx_two),
                                                                       Arc::clone(&arc_tx_one),
     ));
@@ -718,6 +580,13 @@ fn main() -> () {
             }
             None => (),
         }
+
+        match widget_stack.get_mut(0) {
+            Some(ref mut widget) => {
+                widget.update(1.0);
+            },
+            None => (),
+        };
 
         // event processing which is sent directly to the top layer widget.
         for event in event_pump.poll_iter() {
@@ -777,9 +646,7 @@ fn main() -> () {
 
     if let Some(thread) = lua_worker.thread {
         println!("Waiting on lua thread to finish, as it hsould");
-
         arc_tx_one.lock().unwrap().send("l_exit".into()).unwrap();
-
         thread.join().unwrap();
     }
 }

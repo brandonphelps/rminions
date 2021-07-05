@@ -61,7 +61,7 @@ impl KeyboardState {
 
 /// Manages the state of input provided by the user as a collection of strings.
 /// provides some font handling and drawing to the screen.
-pub struct Console<'ttf, 'a, 'callback> {
+pub struct Console<'ttf, 'a> {
     current_string: String,
     buffer: Vec<String>,
 
@@ -82,7 +82,7 @@ pub struct Console<'ttf, 'a, 'callback> {
     sender: Arc<Mutex<mpsc::Sender<String>>>,
 }
 
-impl<'ttf, 'a, 'callback> Console<'ttf, 'a, 'callback> {
+impl<'ttf, 'a> Console<'ttf, 'a> {
     pub fn new(
         font_path: PathBuf,
         ttf_c: &'ttf Sdl2TtfContext,
@@ -109,13 +109,20 @@ impl<'ttf, 'a, 'callback> Console<'ttf, 'a, 'callback> {
     }
 }
 
-impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
+impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
     fn get_current_string(&self) -> String {
         self.current_string.clone()
     }
 
     fn update(&mut self, _: f32) {
-        todo!()
+        {
+            match self.receiver.lock().unwrap().try_recv() {
+                Ok(r) => {
+                    self.buffer.push(r);
+                },
+                Err(_) => (),
+            }
+        }
     }
 
     fn update_event(&mut self, event: sdl2::event::Event) {
@@ -156,21 +163,11 @@ impl<'ttf, 'a, 'callback> Widget for Console<'ttf, 'a, 'callback> {
             _ => (),
         };
 
-        {
-            match self.receiver.lock().unwrap().try_recv() {
-                Ok(r) => {
-                    println!("Got a message back: {}", r);
-                    self.buffer.push(r);
-                },
-                Err(r) => {
-                    println!("Got recieve error, maybe jus tokay?: {:#?}", r);
-                },
-            }
-        }
+
     }
 }
 
-impl<'ttf, 'a, 'callback> DrawableWidget for Console<'ttf, 'a, 'callback> {
+impl<'ttf, 'a> DrawableWidget for Console<'ttf, 'a> {
     fn draw(&mut self, canvas: &mut Canvas<Window>, _x: u32, _y: u32) {
         let background_rec = Rect::new(0, 0, self.console_width, self.console_height);
 
