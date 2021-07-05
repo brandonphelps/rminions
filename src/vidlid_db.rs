@@ -197,6 +197,16 @@ impl Iterator for VideoFetcher {
     }
 }
 
+pub fn get_channels(conn: &mut postgres::Client) -> Vec<String> {
+    let select = "select title from channel";
+    let mut rest = Vec::new();
+    for i in conn.query(select, &[]).unwrap() {
+        let title: &str = i.get(0);
+        rest.push(title.into());
+    }
+    rest
+}
+
 pub fn get_networks(conn: &mut postgres::Client) -> Vec<String> {
     let select = "select title from network";
     let mut rest = Vec::new();

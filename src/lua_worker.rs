@@ -13,32 +13,41 @@ use postgres::{Client as psqlClient, NoTls};
 
 
 use crate::vidlid_db::VideoFetcher;
-use crate::vidlid_db::{get_channel, does_video_exist, add_video};
+use crate::vidlid_db::{get_channel, get_channels as o_get_channels, does_video_exist, add_video};
 
-fn populate_db(channel_name: String) -> Vec<String> {
-    //let p = get_channel(&mut ps_client, "overthegun".into());
+fn get_channels() -> Vec<String> {
     let mut ps_client = psqlClient::connect("host=192.168.0.4 user=postgres password=secretpassword port=5432", NoTls).unwrap();
 
-    // let c_name: String = channel_name;
-    // let c = get_channel(&mut ps_client, c_name.clone()).expect("Failed to get channel");
+    o_get_channels(&mut ps_client)
+}
 
-    // let fetcher = VideoFetcher::new(c_name.clone(), c.get_channel_id());
-    // let mut already_added_count = 0;
-    // let do_full = false;
-    // for i in fetcher {
-    //     if does_video_exist(&mut ps_client, i.get_video_id()) {
-    //         println!("Already have video: {}", i.get_title());
-    //         already_added_count += 1;
-    //     } else {
-    //         println!("Adding vid: {}", i.get_title());
-    //         add_video(&mut ps_client, c.get_id(), i);
-    //     }
+fn populate_db(channel_name: String) -> Vec<String> {
+    let mut ps_client = psqlClient::connect("host=192.168.0.4 user=postgres password=secretpassword port=5432", NoTls).unwrap();
 
-    //     if !do_full && already_added_count > 40 {
-    //         break;
-    //     }
-    // }
-    vec!["hello".into(), "world".into(), "i like cheeze".into()]
+    let c_name: String = channel_name;
+    let c = get_channel(&mut ps_client, c_name.clone()).expect("Failed to get channel");
+
+    let fetcher = VideoFetcher::new(c_name.clone(), c.get_channel_id());
+    let mut already_added_count = 0;
+    let do_full = false;
+    for i in fetcher {
+        if does_video_exist(&mut ps_client, i.get_video_id()) {
+            println!("Already have video: {}", i.get_title());
+            already_added_count += 1;
+        } else {
+            println!("Adding vid: {}", i.get_title());
+            add_video(&mut ps_client, c.get_id(), i);
+        }
+
+        if !do_full && already_added_count > 40 {
+            break;
+        }
+    }
+
+    Vec::new()
+
+// vec!["hello".into(), "world".into(), "i like cheeze".into()]
+
 }
 
 
@@ -64,7 +73,11 @@ impl LuaWorker {
                 let res = populate_db(chn_name);
                 Ok(res)
             }).unwrap();
+            let channel_list = lua_ctx.create_function(|_, ()| {
+                Ok(get_channels())
+            }).unwrap();
             globals.set("populate_db", pop_db).unwrap();
+            globals.set("list_channels", channel_list).unwrap();
         });
     }
 
