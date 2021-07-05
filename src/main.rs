@@ -303,15 +303,42 @@ struct LuaWorker {
 }
 
 impl LuaWorker {
+    fn initial_lua(lua: &Lua) {
+        lua.context(|lua_ctx| { 
+            let globals = lua_ctx.globals();
+            let pop_db = lua_ctx.create_function(|_, chn_name: String| {
+                println!("hello world: {}", chn_name);
+                populate_db(chn_name);
+                Ok(())
+            }).unwrap();
+            globals.set("populate_db", pop_db).unwrap();
+        });
+    }
+
+
     fn new(receiver: Arc<Mutex<mpsc::Receiver<String>>>,
            sender: Arc<Mutex<mpsc::Sender<String>>>) -> Self {
         let p = thread::spawn(move || {
             let lua = Lua::new();
-            
+
+
+            // load inital lua environment
+            LuaWorker::initial_lua(&lua);
+
             loop {
                 println!("Waiting for lua message");
                 let message = receiver.lock().unwrap().recv().unwrap();
                 println!("Got lua message: {}", message);
+                if message == "l_exit" {
+                    break;
+                } else if message == "vidlid_update(overthegun)" {
+                    populate_db("overthegun".into());
+                    continue;
+                } else if message == "vidlid_update(gura)" {
+                    populate_db("gura".into());
+                    continue;
+                }
+
 
                 lua.context(|lua_ctx| {
                     let lua_ret = lua_ctx.load(&message).eval::<rlua::MultiValue>();
@@ -377,6 +404,38 @@ impl LuaWorker {
     }
 }
 
+use postgres::{Client as psqlClient, NoTls};
+
+use crate::vidlid_db::VideoFetcher;
+use crate::vidlid_db::{get_channel, does_video_exist, add_video};
+
+fn populate_db(channel_name: String) {
+    //let p = get_channel(&mut ps_client, "overthegun".into());
+    let mut ps_client = psqlClient::connect("host=192.168.0.4 user=postgres password=secretpassword port=5432", NoTls).unwrap();
+
+    let c_name: String = channel_name;
+    let c = get_channel(&mut ps_client, c_name.clone()).expect("Failed to get channel");
+
+    let fetcher = VideoFetcher::new(c_name.clone(), c.get_channel_id());
+    let mut already_added_count = 0;
+    let do_full = false;
+    for i in fetcher {
+        if does_video_exist(&mut ps_client, i.get_video_id()) {
+            println!("Already have video: {}", i.get_title());
+            already_added_count += 1;
+        } else {
+            println!("Adding vid: {}", i.get_title());
+            add_video(&mut ps_client, c.get_id(), i);
+        }
+
+        if !do_full && already_added_count > 40 {
+            break;
+        }
+    }
+}
+
+
+
 fn main() -> () {
     let (tx_one, rx_one) = mpsc::channel();
     let (tx_two, rx_two) = mpsc::channel::<String>();
@@ -386,27 +445,16 @@ fn main() -> () {
 
     let lua_worker = LuaWorker::new(Arc::clone(&arc_rx), Arc::clone(&arc_tx));
 
-    for i in vec!["a=1", "b=1", "a+b"] {
+    for i in vec!["a=1", "b=1", "a+b", r#"populate_db("gura")"#, "l_exit"] {
         tx_one.send(i.into()).unwrap();
         thread::sleep(Duration::from_secs(2));
     }
+
+
     println!("Finished sending messages waiting for responses");
     thread::sleep(Duration::from_secs(3));
 
-    for i in rx_two.iter() {
-        println!("ResponseS: {}", i);
-    }
-
-    // for received in rx {
-    //     println!("{}", received);
-    // }
-
-
-
-
-
-    return;
-
+    println!("ResponseS: {}", rx_two.recv().unwrap());
     let lua = Lua::new();
     let mut lua_src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     lua_src_dir.push("lua");
@@ -637,8 +685,11 @@ fn main() -> () {
 
     let temp = |value| hello(&lua, value);
 
+
     let mut widget_stack = Vec::<Box<dyn widget::DrawableWidget>>::new();
-    let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p, &ttf_context, &temp));
+    let temp: Box<dyn widget::DrawableWidget> = Box::new(Console::new(p,
+                                                                      &ttf_context,
+                                                                      &temp));
     widget_stack.push(temp);
 
     // hold the app and wait for user to quit.
@@ -712,5 +763,10 @@ fn main() -> () {
                 }
             }
         }
+    }
+
+    if let Some(thread) = lua_worker.thread {
+        println!("Waiting on lua thread to finish, as it hsould");
+        thread.join().unwrap();
     }
 }

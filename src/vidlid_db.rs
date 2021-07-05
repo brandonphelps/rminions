@@ -36,6 +36,10 @@ impl Video {
     pub fn get_video_id(&self) -> String {
         self.video_id.clone()
     }
+
+    pub fn get_title(&self) -> String {
+        self.title.clone()
+    }
 }
 
 #[derive(Debug, Deserialize)]
