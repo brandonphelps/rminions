@@ -109,10 +109,6 @@ fn main() -> () {
     thread::sleep(Duration::from_secs(1));
 
     let lua = Lua::new();
-    // move this handling into the lua_worker init 
-    let mut lua_src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    lua_src_dir.push("lua");
-    let lua_main = lua_src_dir.join("main.lua");
 
     // sdl video stuff.
     let sdl_context = sdl2::init().unwrap();
@@ -136,17 +132,7 @@ fn main() -> () {
         .unwrap();
     canvas.clear();
 
-    fn load_lua_file<P>(lua: &Lua, c: P)
-    where
-        P: std::convert::AsRef<std::path::Path>,
-    {
-        let file_contents = std::fs::read_to_string(c).expect("Failed to load lua file");
-        lua.context(|lua_ctx| {
-            lua_ctx.load(&file_contents).exec();
-        });
-    }
 
-    load_lua_file(&lua, lua_main);
 
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

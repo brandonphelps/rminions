@@ -8,6 +8,8 @@ use std::sync::{mpsc, Arc, Mutex};
 
 use rlua::Lua;
 
+use std::path::PathBuf;
+
 // todo: move this to vidlid_db
 use postgres::{Client as psqlClient, NoTls};
 
@@ -63,20 +65,49 @@ pub struct LuaWorker {
     pub thread: Option<thread::JoinHandle<()>>,
 }
 
+fn load_lua_file<P>(lua: &Lua, c: P)
+where
+    P: std::convert::AsRef<std::path::Path>,
+{
+    let file_contents = std::fs::read_to_string(c).expect("Failed to load lua file");
+    lua.context(|lua_ctx| {
+        lua_ctx.load(&file_contents).exec().expect("Failed to load file");
+    });
+}
+
 impl LuaWorker {
     fn initial_lua(lua: &Lua) {
         lua.context(|lua_ctx| { 
+
+            // move this handling into the lua_worker init 
+            let mut lua_src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            lua_src_dir.push("lua");
+            let lua_main = lua_src_dir.join("main.lua");
+
+            let file_contents = std::fs::read_to_string(lua_main).expect("Failed to read from lua string");
+            lua.context(|lua_ctx| {
+                lua_ctx.load(&file_contents).exec().unwrap();
+            });
+
             let globals = lua_ctx.globals();
             let pop_db = lua_ctx.create_function(|_, chn_name: String| {
                 let res = populate_db(chn_name);
                 Ok(res)
             }).unwrap();
+
             let channel_list = lua_ctx.create_function(|_, ()| {
-                println!("Getting channels");
                 Ok(get_channels())
             }).unwrap();
+
+            let r_print = lua_ctx.create_function(|_, val: String| {
+                println!("Rust Print: {}", val);
+                Ok(vec![val
+                ])
+            }).unwrap();
+                
             globals.set("populate_db", pop_db).unwrap();
             globals.set("list_channels", channel_list).unwrap();
+            globals.set("r_print", r_print).unwrap();
         });
     }
 
@@ -88,12 +119,10 @@ impl LuaWorker {
         }
     }
 
-
     pub fn new(receiver: Arc<Mutex<mpsc::Receiver<String>>>,
                sender: Arc<Mutex<mpsc::Sender<LuaResponse>>>) -> Self {
         let p = thread::spawn(move || {
             let lua = Lua::new();
-
 
             // load inital lua environment
             LuaWorker::initial_lua(&lua);
@@ -106,28 +135,32 @@ impl LuaWorker {
                     break;
                 }
 
-
                 lua.context(|lua_ctx| {
                     let lua_ret = lua_ctx.load(&message).eval::<rlua::MultiValue>();
                     
                     match lua_ret {
                         Ok(r) => {
-                            
                             for j in r.iter() {
                                 match j {
                                     rlua::Value::Nil => {
+                                        println!("Got nil");
                                         LuaWorker::send_message(&sender, Some("nil".into()));
                                     },
                                     rlua::Value::Boolean(t) => {
+                                        println!("Got a bool");
                                         LuaWorker::send_message(&sender, Some(format!("{}", t)));
                                     },
                                     rlua::Value::Integer(t) => {
+                                        println!("Got a int");
                                         LuaWorker::send_message(&sender, Some(format!("{}", t)));
                                     },
                                     rlua::Value::String(t) => {
-                                        LuaWorker::send_message(&sender, Some(format!("{}", t.to_str().unwrap())));
+                                        let val_r = format!("{}", t.to_str().unwrap());
+                                        println!("Got a value back: {}", val_r);
+                                        LuaWorker::send_message(&sender, Some(val_r));
                                     },
                                     rlua::Value::Table(t) => {
+                                        println!("Got a table");
                                         let len: i64 = t.len().unwrap();
                                         for i in 1..len {
                                             match t.get::<i64, String>(i) {
@@ -140,6 +173,7 @@ impl LuaWorker {
                                         }
                                     },
                                     _ => {
+                                        println!("Got unknown");
                                         LuaWorker::send_message(&sender, Some("unknown string".into()));
                                     }
                                 }

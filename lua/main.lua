@@ -1,6 +1,12 @@
 
+function add(a, b)
+   return a+b
+end
 
 
-
-
-#! print(add(2,3))
+function update_db()
+   a = list_channels()
+   for i,v in pairs(a) do
+      r_print(v)
+   end
+end
