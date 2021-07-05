@@ -318,21 +318,28 @@ impl LuaWorker {
                     
                     match lua_ret {
                         Ok(r) => {
-                            for j in r.iter() {
-                                match *j {
-                                    rlua::Value::Nil => {
-                                        {
-                                            sender.lock().unwrap().send("nil".into()).unwrap();
-                                        }
-                                    },
-                                    
-                                    _ => {
-                                        {
-                                            sender.lock().unwrap().send("to string undefined".into()).unwrap();
-                                        }
-                                    }
-                                }
+                            let p = r.iter().map(|value| format!("{:?}", value)).collect::<Vec<_>>().join("\t");
+
+                            {
+                                sender.lock().unwrap().send(p).unwrap();
                             }
+
+                            // for j in r.iter() {
+                            //     println!("j: {:?}", *j);
+
+                            //     match *j {
+                            //         rlua::Value::Nil => {
+                            //             {
+                            //                 sender.lock().unwrap().send("nil".into()).unwrap();
+                            //             }
+                            //         },
+                            //         _ => {
+                            //             {
+                            //                 sender.lock().unwrap().send("to string undefined".into()).unwrap();
+                            //             }
+                            //         }
+                            //     }
+                            // }
                         },
                         Err(r) => {
                             println!("got an error");
@@ -358,8 +365,8 @@ fn main() -> () {
 
     let lua_worker = LuaWorker::new(Arc::clone(&arc_rx), Arc::clone(&arc_tx));
 
-    for i in vec!["hello", "world", "jojo"] {
-        tx_one.send(i.into());
+    for i in vec!["a=1", "b=1", "a+b"] {
+        tx_one.send(i.into()).unwrap();
         thread::sleep(Duration::from_secs(2));
     }
     println!("Finished sending messages waiting for responses");
