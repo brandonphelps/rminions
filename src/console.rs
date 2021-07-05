@@ -8,6 +8,7 @@ use sdl2::keyboard::Mod;
 
 use crate::widget::DrawableWidget;
 use crate::widget::Widget;
+use crate::lua_worker::LuaResponse;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -78,15 +79,19 @@ pub struct Console<'ttf, 'a> {
     // height of the console frame in pixels.
     console_height: u32,
 
-    receiver: Arc<Mutex<mpsc::Receiver<String>>>,
+    // holds users input while process in the background is running. 
+    temp_buff: String,
+    receiver: Arc<Mutex<mpsc::Receiver<LuaResponse>>>,
     sender: Arc<Mutex<mpsc::Sender<String>>>,
+
+    is_waiting_for_response: bool,
 }
 
 impl<'ttf, 'a> Console<'ttf, 'a> {
     pub fn new(
         font_path: PathBuf,
         ttf_c: &'ttf Sdl2TtfContext,
-        receiver: Arc<Mutex<mpsc::Receiver<String>>>,
+        receiver: Arc<Mutex<mpsc::Receiver<LuaResponse>>>,
         sender: Arc<Mutex<mpsc::Sender<String>>>
     ) -> Self {
         Self {
@@ -100,6 +105,8 @@ impl<'ttf, 'a> Console<'ttf, 'a> {
             console_height: 600,
             receiver,
             sender,
+            temp_buff: String::new(),
+            is_waiting_for_response: false,
         }
     }
 
@@ -115,10 +122,21 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
     }
 
     fn update(&mut self, _: f32) {
+        // here for scope lock.
         {
             match self.receiver.lock().unwrap().try_recv() {
                 Ok(r) => {
-                    self.buffer.push(r);
+                    match r {
+                        LuaResponse::Result(r) => {
+                            self.buffer.push(r);
+                        },
+                        LuaResponse::Done => {
+                            self.is_waiting_for_response = false;
+                        }
+                        _ => {
+                            println!("not done yet");
+                        },
+                    }
                 },
                 Err(_) => (),
             }
@@ -132,10 +150,24 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
                 repeat: false,
                 ..
             } => {
+                // not certain about this, wanted to cache all the values
+                // the usertyped while waiting for a response then push that into
+                // the current string buffer.
+                if !self.is_waiting_for_response && self.temp_buff.len() > 0 {
+                    self.current_string.push_str(&self.temp_buff);
+                    self.temp_buff.clear();
+                }
+
                 // character input.
                 let charac = get_character_from_event(&event);
                 match charac {
-                    Some(c) => self.current_string.push(c),
+                    Some(c) => {
+                        if !self.is_waiting_for_response {
+                            self.current_string.push(c);
+                        } else {
+                            self.temp_buff.push(c);
+                        }
+                    }
                     None => (),
                 };
 
@@ -148,6 +180,7 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
                         self.buffer.push(self.current_string.clone());
                         {
                             self.sender.lock().unwrap().send(self.current_string.clone()).unwrap();
+                            self.is_waiting_for_response = true;
                         }
                         self.current_string.clear();
                     }
@@ -162,8 +195,6 @@ impl<'ttf, 'a> Widget for Console<'ttf, 'a> {
             } => {}
             _ => (),
         };
-
-
     }
 }
 
@@ -330,7 +361,14 @@ fn get_character_from_event(event: &Event) -> Option<char> {
                         } else {
                             Some('h')
                         }
-                    }
+                    },
+                    Keycode::V => {
+                        if is_upper {
+                            Some('V')
+                        } else {
+                            Some('v')
+                        }
+                    },
                     Keycode::I => {
                         if is_upper {
                             Some('I')
