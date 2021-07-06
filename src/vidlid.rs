@@ -1,14 +1,5 @@
 #![allow(unused_imports)]
 
-#[macro_use]
-extern crate rocket;
-
-use rocket::response::content::Html;
-use rocket::response::Redirect;
-use rocket::Request;
-
-use rocket_dyn_templates::{context, tera::Tera, Template};
-
 use std::collections::HashMap;
 
 mod vidlid_db;
@@ -64,31 +55,3 @@ use vidlid_db::{add_video, does_video_exist, get_channel, VideoFetcher};
 //     rocket::build().mount("/", routes![index, hello])
 //         .mount("/tera", routes![tera_index, tera_hello])
 // }
-
-mod tera;
-
-#[get("/hello/<name>")]
-fn tera_hello(name: &str) -> Template {
-    Template::render(
-        "tera/index",
-        context! {
-            title: "Hello",
-            name: Some(name),
-            items: vec!["One", "Two", "Three"],
-        },
-    )
-}
-
-#[get("/")]
-fn index() -> Html<&'static str> {
-    Html(r#"See <a href="tera">Tera</a> or <a href="hbs">Handlebars</a>."#)
-}
-
-#[launch]
-fn rocket() -> _ {
-    rocket::build()
-        .mount("/", routes![index])
-        .mount("/tera", routes![tera::index, tera::hello, tera::about])
-        .mount("/terra_t", routes![tera_hello])
-        .register("/tera", catchers![tera::not_found])
-}

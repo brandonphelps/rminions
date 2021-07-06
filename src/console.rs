@@ -643,7 +643,7 @@ mod tests {
             repeat: false,
         };
 
-        assert_eq!(get_character_from_event(&event), 'p');
+        assert_eq!(get_character_from_event(&event), Some('p'));
 
         let event2 = Event::KeyUp {
             timestamp: 0,
@@ -653,6 +653,6 @@ mod tests {
             keymod: sdl2::keyboard::Mod::LSHIFTMOD,
             repeat: false,
         };
-        assert_eq!(get_character_from_event(&event), 'P');
+        assert_eq!(get_character_from_event(&event), Some('P'));
     }
 }

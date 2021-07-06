@@ -211,25 +211,36 @@ pub fn get_videos(conn: &mut postgres::Client, channel_name: String) -> Option<V
     match c {
         Some((id, chann)) => {
 
-            let video_select = "select title, url, video_id, posted_time, watched, channel_id from video where channel_id = $1"; 
+            let video_select = "select title, url, video_id, posted_time, watched, channel_id from video where channel_id = $1 and watched = false order by posted_time asc"; 
 
             let mut res = Vec::new();
             for i in conn.query(video_select, &[&id]).unwrap() {
-
-                
-
+                let title: &str = i.get("title");
+                let time: NaiveDateTime = i.get(3);
+                // pub fn new(url: String, title: String, video_id: String, posted_time: String) -> Self {
                 let mut vid = Video::new(String::from_str(i.get(1)).unwrap(),
-                                         String::from_str(i.get(0)).unwrap(),
-                                         String::from_str(i.get(2)).unwrap(),
-                                         String::from_str(i.get(3)).unwrap());
-                vid.watched = Some(i.get(4));
-            }
+                                         String::from_str(title).unwrap(),
+                                         String::from_str(i.get("video_id")).unwrap(),
+                                         time.to_string());
 
+                vid.watched = Some(i.get("watched"));
+                res.push(vid);
+            }
             Some(res)
         },
         None => None
     }
 }
+
+pub fn set_watched(conn: &mut postgres::Client, video_title: String, is_watched: bool) -> bool {
+    let update = "update video set watched = $1 where title = $2";
+    if conn.execute(update, &[&is_watched, &video_title]).unwrap() == 1 {
+        true 
+    } else {
+        false
+    }
+}
+
 
 pub fn get_networks(conn: &mut postgres::Client) -> Vec<String> {
     let select = "select title from network";
@@ -239,4 +250,27 @@ pub fn get_networks(conn: &mut postgres::Client) -> Vec<String> {
         rest.push(title.into())
     }
     rest
+}
+
+
+
+
+#[cfg(test)]
+mod tests {
+    use postgres::NoTls;
+use super::*;
+    // todo: mock out the postgres conns.
+
+    #[test]
+    fn test_get_videos() {
+        let mut ps_client = psqlClient::connect("host=192.168.0.4 user=postgres password=secretpassword port=5432", NoTls).unwrap();
+
+        let p = get_videos(&mut ps_client, "overthegun".into());
+
+        for i in p.iter() {
+            //
+        }
+
+        assert_eq!(1,2)
+    } 
 }

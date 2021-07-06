@@ -11,16 +11,11 @@ default = []
 [dependencies]
 rand="0.7.3"
 rlua="0.16.2"
-rocket = { path = "../Rocket/core/lib" }
 reqwest = {version="^0.11", features=["blocking", "json"]}
 serde = {version= "^1.0.0", features=["derive"]}
 serde_json = { version="^1.0.0" }
 postgres = {version="0.19.1", features=["with-chrono-0_4"]}
 chrono = "0.4.0"
-
-[dependencies.rocket_dyn_templates]
-path = "../Rocket/contrib/dyn_templates"
-features = ["handlebars", "tera"]
 
 [dependencies.sdl2]
 version="0.34"
@@ -29,10 +24,6 @@ default-features = false
 features = ["ttf", "image"]
 optional = false
 
-
-[[bin]]
-name = "vidlid"
-path = "src/vidlid.rs"
 
 [[bin]]
 name = "main"

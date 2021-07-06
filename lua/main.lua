@@ -4,15 +4,6 @@ function add(a, b)
 end
 
 
-function update_db()
-   a = list_channels()
-   for i,v in pairs(a) do
-      
-   end
-
-   
-
-end
 
 my_cool_state = {}
 my_cool_state.time = 0
@@ -26,7 +17,7 @@ end
 -- must require lua folder,
 -- i.e is from the root of the binary.
 dofile('lua/other.lua')
-
+dofile('lua/vidlid.lua')
 
 
 

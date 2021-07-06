@@ -186,17 +186,17 @@ fn main() -> () {
         res
     }
 
-    let _output = if cfg!(target_os = "windows") {
-        pCommand::new("cmd")
-            .args(&["/C", "echo hello"])
-            .output()
-            .expect("failed to execute process")
-    } else {
-        pCommand::new("open")
-            .args(&["-a", "firefox", "https://www.google.com"])
-            .output()
-            .expect("failed to execute process")
-    };
+    // let _output = if cfg!(target_os = "windows") {
+    //     pCommand::new("cmd")
+    //         .args(&["/C", "echo hello"])
+    //         .output()
+    //         .expect("failed to execute process")
+    // } else {
+    //     pCommand::new("open")
+    //         .args(&["-a", "firefox", "https://www.google.com"])
+    //         .output()
+    //         .expect("failed to execute process")
+    // };
 
     let _temp = |value| hello(&lua, value);
 

@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+use rlua::ToLua;
 use std::thread;
 use std::time::Duration;
 
@@ -14,10 +15,26 @@ use std::path::PathBuf;
 use postgres::{Client as psqlClient, NoTls};
 
 
-use crate::vidlid_db::VideoFetcher;
+use crate::vidlid_db::{VideoFetcher, Video};
 use crate::vidlid_db::{get_channel, get_videos,
                        get_channels as o_get_channels,
+                       set_watched,
                        does_video_exist, add_video};
+
+impl<'lua> ToLua<'lua> for Video {
+    fn to_lua(self, con: rlua::Context<'lua>) -> std::result::Result<rlua::Value<'lua>, rlua::Error> {
+        let mut table: rlua::Table = con.create_table().unwrap();
+        table.set("title", self.get_title());
+
+        Ok(rlua::Value::Table(table))
+    }
+}
+
+fn mark_watched(video_title: String, watched: bool) {
+    let mut ps_client = psqlClient::connect("host=192.168.0.4 user=postgres password=secretpassword port=5432", NoTls).unwrap();
+
+    set_watched(&mut ps_client, video_title, watched);
+}
 
 fn get_channels() -> Vec<String> {
     let mut ps_client = psqlClient::connect("host=192.168.0.4 user=postgres password=secretpassword port=5432", NoTls).unwrap();
@@ -25,14 +42,14 @@ fn get_channels() -> Vec<String> {
     o_get_channels(&mut ps_client)
 }
 
-fn list_videos_by_ch(channel_name: String) -> Vec<String> {
+fn list_videos_by_ch(channel_name: String) -> Vec<Video> {
     let mut ps_client = psqlClient::connect("host=192.168.0.4 user=postgres password=secretpassword port=5432", NoTls).unwrap();
 
     match get_videos(&mut ps_client, channel_name) {
         Some(ref video_list) => {
             let mut res = Vec::new();
             for i in video_list.iter() {
-                res.push(i.get_title());
+                res.push(i.clone());
             }
             res
         },
@@ -67,7 +84,6 @@ fn populate_db(channel_name: String) -> Vec<String> {
     res
 }
 
-
 pub enum LuaMessage {
     
 }
@@ -100,7 +116,7 @@ impl LuaWorker {
             let mut lua_src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             lua_src_dir.push("lua");
             let lua_main = lua_src_dir.join("main.lua");
-
+            
             let file_contents = std::fs::read_to_string(lua_main).expect("Failed to read from lua string");
             lua.context(|lua_ctx| {
                 lua_ctx.load(&file_contents).exec().unwrap();
@@ -125,11 +141,15 @@ impl LuaWorker {
             let vide_list = lua_ctx.create_function(|_, chn_name: String| {
                 Ok(list_videos_by_ch(chn_name))
             }).unwrap();
+            let set_watcch = lua_ctx.create_function(|_, (vid_name, valu): (String, bool)| {
+                Ok(mark_watched(vid_name, valu))
+            }).unwrap();
 
             globals.set("populate_db", pop_db).unwrap();
             globals.set("list_channels", channel_list).unwrap();
             globals.set("list_videos", vide_list).unwrap();
             globals.set("r_print", r_print).unwrap();
+            globals.set("set_watched", set_watcch).unwrap();
         });
     }
 
