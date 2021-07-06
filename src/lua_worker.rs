@@ -15,12 +15,29 @@ use postgres::{Client as psqlClient, NoTls};
 
 
 use crate::vidlid_db::VideoFetcher;
-use crate::vidlid_db::{get_channel, get_channels as o_get_channels, does_video_exist, add_video};
+use crate::vidlid_db::{get_channel, get_videos,
+                       get_channels as o_get_channels,
+                       does_video_exist, add_video};
 
 fn get_channels() -> Vec<String> {
     let mut ps_client = psqlClient::connect("host=192.168.0.4 user=postgres password=secretpassword port=5432", NoTls).unwrap();
 
     o_get_channels(&mut ps_client)
+}
+
+fn list_videos_by_ch(channel_name: String) -> Vec<String> {
+    let mut ps_client = psqlClient::connect("host=192.168.0.4 user=postgres password=secretpassword port=5432", NoTls).unwrap();
+
+    match get_videos(&mut ps_client, channel_name) {
+        Some(ref video_list) => {
+            let mut res = Vec::new();
+            for i in video_list.iter() {
+                res.push(i.get_title());
+            }
+            res
+        },
+        None => { Vec::new() },
+    }
 }
 
 fn populate_db(channel_name: String) -> Vec<String> {
@@ -29,7 +46,7 @@ fn populate_db(channel_name: String) -> Vec<String> {
     let c_name: String = channel_name;
     let c = get_channel(&mut ps_client, c_name.clone()).expect("Failed to get channel");
 
-    let fetcher = VideoFetcher::new(c_name.clone(), c.get_channel_id());
+    let fetcher = VideoFetcher::new(c_name.clone(), c.1.get_channel_id());
     let mut already_added_count = 0;
     let do_full = false;
     let mut res = Vec::new();
@@ -40,7 +57,7 @@ fn populate_db(channel_name: String) -> Vec<String> {
             res.push(i.get_title());
         } else {
             res.push(format!("Adding: {}", i.get_title()));
-            add_video(&mut ps_client, c.get_id(), i);
+            add_video(&mut ps_client, c.0, i);
         }
 
         if !do_full && already_added_count > 40 {
@@ -105,8 +122,13 @@ impl LuaWorker {
                 ])
             }).unwrap();
                 
+            let vide_list = lua_ctx.create_function(|_, chn_name: String| {
+                Ok(list_videos_by_ch(chn_name))
+            }).unwrap();
+
             globals.set("populate_db", pop_db).unwrap();
             globals.set("list_channels", channel_list).unwrap();
+            globals.set("list_videos", vide_list).unwrap();
             globals.set("r_print", r_print).unwrap();
         });
     }

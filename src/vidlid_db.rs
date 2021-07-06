@@ -5,6 +5,8 @@ use postgres::Client as psqlClient;
 use reqwest::blocking::Client;
 use serde::Deserialize;
 
+use std::str::FromStr;
+
 #[derive(Debug, Deserialize)]
 pub struct VideoResponse {
     videos: Vec<Video>,
@@ -44,17 +46,12 @@ impl Video {
 
 #[derive(Debug, Deserialize)]
 pub struct Channel {
-    id: i32,
     title: String,
     channel_id: String,
     channel_type: String,
 }
 
 impl Channel {
-    pub fn get_id(&self) -> i32 {
-        self.id
-    }
-
     pub fn get_channel_id(&self) -> String {
         self.channel_id.clone()
     }
@@ -65,61 +62,6 @@ pub struct Network {
     title: String,
 }
 
-pub fn get_channel(conn: &mut psqlClient, channel_title: String) -> Option<Channel> {
-    let s = "select * from channel where title=$1";
-    for i in conn.query(s, &[&channel_title]).unwrap() {
-        println!("{:#?}", i);
-
-        let id: i32 = i.get(0);
-        let title: &str = i.get(1);
-        let _network_id: i32 = i.get(2);
-        let channel_type: &str = i.get(3);
-        let _hidden: bool = i.get(4);
-        let channel_id: &str = i.get(5);
-
-        return Some(Channel {
-            id: id,
-            title: title.into(),
-            channel_id: channel_id.into(),
-            channel_type: channel_type.into(),
-        });
-    }
-    None
-}
-
-pub fn add_video(conn: &mut psqlClient, channel_id: i32, vid: Video) {
-    let insert_s = "insert into video (channel_id, video_id, watched, posted_time, hidden, title, url) values($1, $2, $3, $4, $5, $6, $7)";
-    let timezone = NaiveDateTime::parse_from_str(&vid.posted_time, "%Y-%m-%dT%H:%M:%SZ").unwrap();
-
-    conn.execute(
-        insert_s,
-        &[
-            &channel_id,
-            &vid.video_id,
-            &false,
-            &timezone,
-            &false,
-            &vid.title,
-            &vid.url,
-        ],
-    )
-    .unwrap();
-}
-
-pub fn does_video_exist(conn: &mut psqlClient, video_id: String) -> bool {
-    let where_s = "select video_id from video where video_id=$1";
-
-    let mut res = false;
-
-    for i in conn.query(where_s, &[&video_id]).unwrap() {
-        let vid_id: &str = i.get(0);
-        // likely redudant check.
-        if vid_id == video_id {
-            res = true;
-        }
-    }
-    res
-}
 
 pub struct VideoFetcher {
     title: String,
@@ -197,6 +139,63 @@ impl Iterator for VideoFetcher {
     }
 }
 
+pub fn get_channel(conn: &mut psqlClient, channel_title: String) -> Option<(i32, Channel)> {
+    let s = "select * from channel where title=$1";
+    for i in conn.query(s, &[&channel_title]).unwrap() {
+        println!("{:#?}", i);
+
+        let id: i32 = i.get(0);
+        let title: &str = i.get(1);
+        let _network_id: i32 = i.get(2);
+        let channel_type: &str = i.get(3);
+        let _hidden: bool = i.get(4);
+        let channel_id: &str = i.get(5);
+
+        return Some((id,
+                     Channel {
+                         title: title.into(),
+                         channel_id: channel_id.into(),
+                         channel_type: channel_type.into(),
+                     }));
+    }
+    None
+}
+
+pub fn add_video(conn: &mut psqlClient, channel_id: i32, vid: Video) {
+    let insert_s = "insert into video (channel_id, video_id, watched, posted_time, hidden, title, url) values($1, $2, $3, $4, $5, $6, $7)";
+    let timezone = NaiveDateTime::parse_from_str(&vid.posted_time, "%Y-%m-%dT%H:%M:%SZ").unwrap();
+
+    conn.execute(
+        insert_s,
+        &[
+            &channel_id,
+            &vid.video_id,
+            &false,
+            &timezone,
+            &false,
+            &vid.title,
+            &vid.url,
+        ],
+    )
+    .unwrap();
+}
+
+
+pub fn does_video_exist(conn: &mut psqlClient, video_id: String) -> bool {
+    let where_s = "select video_id from video where video_id=$1";
+
+    let mut res = false;
+
+    for i in conn.query(where_s, &[&video_id]).unwrap() {
+        let vid_id: &str = i.get(0);
+        // likely redudant check.
+        if vid_id == video_id {
+            res = true;
+        }
+    }
+    res
+}
+
 pub fn get_channels(conn: &mut postgres::Client) -> Vec<String> {
     let select = "select title from channel";
     let mut rest = Vec::new();
@@ -205,6 +204,31 @@ pub fn get_channels(conn: &mut postgres::Client) -> Vec<String> {
         rest.push(title.into());
     }
     rest
+}
+
+pub fn get_videos(conn: &mut postgres::Client, channel_name: String) -> Option<Vec<Video>> {
+    let c = get_channel(conn, channel_name);
+    match c {
+        Some((id, chann)) => {
+
+            let video_select = "select title, url, video_id, posted_time, watched, channel_id from video where channel_id = $1"; 
+
+            let mut res = Vec::new();
+            for i in conn.query(video_select, &[&id]).unwrap() {
+
+                
+
+                let mut vid = Video::new(String::from_str(i.get(1)).unwrap(),
+                                         String::from_str(i.get(0)).unwrap(),
+                                         String::from_str(i.get(2)).unwrap(),
+                                         String::from_str(i.get(3)).unwrap());
+                vid.watched = Some(i.get(4));
+            }
+
+            Some(res)
+        },
+        None => None
+    }
 }
 
 pub fn get_networks(conn: &mut postgres::Client) -> Vec<String> {
